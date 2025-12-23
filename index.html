@@ -35,6 +35,12 @@
         .ton-logo {
             filter: drop-shadow(0 0 5px rgba(0, 136, 204, 0.5));
         }
+        /* Стиль для курсов */
+        .rate-badge {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+        }
     </style>
 </head>
 <body class="p-6">
@@ -60,7 +66,7 @@
         </div>
     </div>
 
-    <div class="card-grad w-full h-44 rounded-[30px] p-7 flex flex-col justify-between relative overflow-hidden mb-10">
+    <div class="card-grad w-full h-44 rounded-[30px] p-7 flex flex-col justify-between relative overflow-hidden mb-6">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Network Identity</p>
@@ -73,6 +79,30 @@
         <div class="flex justify-between items-end">
             <span id="user-id-display" class="text-xs font-mono text-zinc-600">ID: 0000000000</span>
             <div class="opacity-10 text-[10px] font-black italic tracking-widest uppercase">Ton Network</div>
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-3 mb-10">
+        <p class="text-zinc-500 text-[9px] uppercase tracking-widest font-bold px-2">Market Rates</p>
+        
+        <div class="rate-badge p-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <img src="https://ton.org/download/ton_symbol.svg" class="w-5 h-5" alt="TON">
+                </div>
+                <span class="font-bold text-sm tracking-tight">TON / USD</span>
+            </div>
+            <span id="ton-price" class="font-mono font-bold text-zinc-300 tracking-tighter">$0.00</span>
+        </div>
+
+        <div class="rate-badge p-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden">
+                    <img src="mj.png" class="w-full h-full object-cover" alt="MJ" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2584/2584651.png'">
+                </div>
+                <span class="font-bold text-sm tracking-tight">MJ / TON</span>
+            </div>
+            <span class="font-mono font-bold text-blue-500 tracking-tighter">0.0002 TON</span>
         </div>
     </div>
 
@@ -89,7 +119,7 @@
                 <button onclick="setFastAmount(1.0)" class="py-4 rounded-2xl bg-zinc-900 border border-white/5 font-bold hover:border-blue-500">1.0</button>
             </div>
             <div class="relative mb-8">
-                <input type="number" id="deposit-input" placeholder="0.00" class="w-full bg-zinc-900 border border-white/10 rounded-2xl py-4 px-6 text-xl font-bold outline-none focus:border-blue-500">
+                <input type="number" id="deposit-input" placeholder="0.00" class="w-full bg-zinc-900 border border-white/10 rounded-2xl py-4 px-6 text-xl font-bold outline-none focus:border-blue-500 text-white">
                 <span class="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-blue-500">TON</span>
             </div>
             <button onclick="processTransaction()" class="ton-btn w-full py-5 rounded-[22px] font-black text-sm uppercase tracking-widest active:scale-95">
@@ -113,7 +143,7 @@
         const tg = window.Telegram.WebApp;
         const MY_ADDRESS = "UQBAshgLU8AMuBwOQjzbpE127NjtI8g9PfoVtGtVCy9SS_kg";
         
-        // ВСТАВЬ СЮДА СВОЮ ССЫЛКУ ИЗ LOCAL TUNNEL ИЛИ NGROK
+        // ВАЖНО: Тут должен быть адрес твоего сервера для получения баланса!
         const SERVER_URL = "https://vadympersona.github.io/Vadymn/"; 
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
@@ -121,11 +151,20 @@
             buttonRootId: 'ton-connect-trigger'
         });
 
-        // ФУНКЦИЯ ПОЛУЧЕНИЯ БАЛАНСА ИЗ БАЗЫ БОТА
+        // Функция получения цены TON с биржи
+        async function getTonPrice() {
+            try {
+                const response = await fetch('https://api.coinbase.com/v2/prices/TON-USD/spot');
+                const data = await response.json();
+                document.getElementById('ton-price').innerText = `$${parseFloat(data.data.amount).toFixed(2)}`;
+            } catch (e) {
+                document.getElementById('ton-price').innerText = "$5.40"; // Заглушка
+            }
+        }
+
         async function syncBalance() {
             const user = tg.initDataUnsafe?.user;
             if (!user || !SERVER_URL.startsWith("http")) return;
-
             try {
                 const response = await fetch(`${SERVER_URL}/get_balance/${user.id}`, {
                     headers: { "Bypass-Tunnel-Reminder": "true" }
@@ -134,9 +173,7 @@
                     const data = await response.json();
                     document.getElementById('display-balance').innerText = data.balance.toFixed(6);
                 }
-            } catch (e) {
-                console.error("Ошибка связи с базой данных");
-            }
+            } catch (e) { console.error("Ошибка связи с базой данных"); }
         }
 
         function toggleModal(show) {
@@ -174,7 +211,6 @@
             } catch (e) { tg.MainButton.hide(); }
         }
 
-        // Загрузка данных профиля
         const user = tg.initDataUnsafe?.user;
         if (user) {
             document.getElementById('user-name').innerText = user.first_name;
@@ -187,10 +223,11 @@
             }
         }
 
-        // Обновляем баланс каждые 5 секунд
+        // Запуск
+        getTonPrice();
+        setInterval(getTonPrice, 60000); // Обновлять цену раз в минуту
         setInterval(syncBalance, 5000);
         syncBalance();
-
         tg.expand();
     </script>
 </body>
