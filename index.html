@@ -11,7 +11,7 @@
         body { 
             background-color: #000; color: white; 
             font-family: -apple-system, sans-serif;
-            overflow-x: hidden; padding-bottom: 100px;
+            overflow-x: hidden; padding-bottom: 110px;
         }
         .card-grad { 
             background: linear-gradient(145deg, #1a1a1a 0%, #050505 100%); 
@@ -35,7 +35,6 @@
         .ton-logo {
             filter: drop-shadow(0 0 5px rgba(0, 136, 204, 0.5));
         }
-        /* Стиль для курсов */
         .rate-badge {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -66,7 +65,7 @@
         </div>
     </div>
 
-    <div class="card-grad w-full h-44 rounded-[30px] p-7 flex flex-col justify-between relative overflow-hidden mb-6">
+    <div class="card-grad w-full h-44 rounded-[30px] p-7 flex flex-col justify-between relative overflow-hidden mb-8">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Network Identity</p>
@@ -133,7 +132,11 @@
             <span class="text-2xl">🏠</span>
             <span class="text-[10px] font-bold uppercase tracking-widest">Главная</span>
         </div>
-        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40">
+        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
+            <span class="text-2xl">📦</span>
+            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Кейсы</span>
+        </a>
+        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
             <span class="text-2xl">👤</span>
             <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Профиль</span>
         </a>
@@ -142,8 +145,6 @@
     <script>
         const tg = window.Telegram.WebApp;
         const MY_ADDRESS = "UQBAshgLU8AMuBwOQjzbpE127NjtI8g9PfoVtGtVCy9SS_kg";
-        
-        // ВАЖНО: Тут должен быть адрес твоего сервера для получения баланса!
         const SERVER_URL = "https://vadympersona.github.io/Vadymn/"; 
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
@@ -151,15 +152,12 @@
             buttonRootId: 'ton-connect-trigger'
         });
 
-        // Функция получения цены TON с биржи
         async function getTonPrice() {
             try {
                 const response = await fetch('https://api.coinbase.com/v2/prices/TON-USD/spot');
                 const data = await response.json();
                 document.getElementById('ton-price').innerText = `$${parseFloat(data.data.amount).toFixed(2)}`;
-            } catch (e) {
-                document.getElementById('ton-price').innerText = "$5.40"; // Заглушка
-            }
+            } catch (e) { document.getElementById('ton-price').innerText = "$5.40"; }
         }
 
         async function syncBalance() {
@@ -201,7 +199,6 @@
                     payload: btoa(tg.initDataUnsafe?.user?.id.toString()) 
                 }]
             };
-
             try {
                 toggleModal(false);
                 tg.MainButton.setText("ПОДТВЕРДИТЕ В КОШЕЛЬКЕ").show();
@@ -223,9 +220,8 @@
             }
         }
 
-        // Запуск
         getTonPrice();
-        setInterval(getTonPrice, 60000); // Обновлять цену раз в минуту
+        setInterval(getTonPrice, 60000);
         setInterval(syncBalance, 5000);
         syncBalance();
         tg.expand();

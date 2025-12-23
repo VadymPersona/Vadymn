@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Major Cases</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background-color: #000; color: white; 
+            font-family: -apple-system, sans-serif;
+            padding-bottom: 100px;
+        }
+        .case-card {
+            background: linear-gradient(180deg, #0f0f0f 0%, #050505 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+        .case-card:active { transform: scale(0.97); }
+        
+        /* Голубое свечение для главного кейса */
+        .glow-blue {
+            box-shadow: 0 0 20px rgba(0, 122, 255, 0.15);
+            border-color: rgba(0, 122, 255, 0.3);
+        }
+        .case-img {
+            filter: drop-shadow(0 0 15px rgba(0, 122, 255, 0.5));
+            object-fit: contain;
+        }
+        .nav-blur {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="mb-8">
+        <h1 class="text-3xl font-black italic tracking-tighter uppercase text-white">Кейсы</h1>
+        <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Удача любит смелых</p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4">
+        
+        <div onclick="window.location.href='case_open.html'" class="case-card glow-blue rounded-[35px] p-6 flex items-center justify-between relative overflow-hidden">
+            <div class="z-10">
+                <h2 class="text-xl font-black italic uppercase leading-none mb-1 text-white">Все или<br>Ничего</h2>
+                <p class="text-[10px] text-blue-500 font-bold uppercase tracking-tighter mb-4">Шанс 0.01% на Снупа</p>
+                <div class="flex items-center gap-2 bg-white/5 w-fit px-3 py-1.5 rounded-full border border-white/5">
+                    <span class="text-xs font-bold text-white">1</span>
+                    <span class="text-sm">⭐</span>
+                </div>
+            </div>
+            
+            <img src="case.png" class="w-32 h-32 case-img relative z-10" alt="Case" onerror="this.src='https://giftsbattle.com/cases/Porsche_911'">
+            
+            <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-blue-600/10 blur-3xl rounded-full"></div>
+        </div>
+
+        <div class="opacity-40 case-card rounded-[35px] p-6 flex items-center justify-between grayscale">
+            <div>
+                <h2 class="text-xl font-black italic uppercase leading-none mb-1">Classic</h2>
+                <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter mb-4">Будет доступно скоро</p>
+                <div class="flex items-center gap-2 bg-white/5 w-fit px-3 py-1.5 rounded-full">
+                    <span class="text-xs font-bold">5</span>
+                    <span class="text-sm">⭐</span>
+                </div>
+            </div>
+            <img src="https://giftsbattle.com/cases/Classic" class="w-28 opacity-50" alt="Case">
+        </div>
+
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 h-20 nav-blur flex justify-around items-center px-8 z-50">
+        <a href="index.html" class="flex flex-col items-center gap-1 opacity-40">
+            <span class="text-2xl">🏠</span>
+            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Главная</span>
+        </a>
+        <div class="flex flex-col items-center gap-1 text-blue-500">
+            <span class="text-2xl">📦</span>
+            <span class="text-[10px] font-bold uppercase tracking-widest">Кейсы</span>
+        </div>
+        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40">
+            <span class="text-2xl">👤</span>
+            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Профиль</span>
+        </a>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        // Легкая вибрация при входе в магазин
+        tg.HapticFeedback.impactOccurred('light');
+    </script>
+</body>
+</html>
