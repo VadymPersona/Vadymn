@@ -3,121 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Major App</title>
+    <title>Major Wallet</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --tg-theme-bg: #000; --tg-theme-accent: #248bf2; }
-        body { background-color: black; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        
-        /* Skeleton Animation */
-        .skeleton { position: relative; overflow: hidden; background: #1a1a1a; border-radius: 12px; }
-        .skeleton::after {
-            content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
-            transform: translateX(-100%);
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
-            animation: shimmer 1.5s infinite;
+        body { 
+            background-color: #000; 
+            color: white; 
+            font-family: -apple-system, sans-serif;
+            overflow: hidden;
         }
-        @keyframes shimmer { 100% { transform: translateX(100%); } }
-
-        .card-grad { background: linear-gradient(145deg, #1a1a1a 0%, #0a0a0a 100%); border: 1px solid rgba(255,255,255,0.1); }
-        .tab-active { color: var(--tg-theme-accent); border-bottom: 2px solid var(--tg-theme-accent); }
+        .card-grad { 
+            background: linear-gradient(145deg, #1a1a1a 0%, #050505 100%); 
+            border: 1px solid rgba(255,255,255,0.08); 
+        }
+        .shimmer {
+            background: linear-gradient(90deg, #111 25%, #222 50%, #111 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite linear;
+        }
+        @keyframes shimmer { 100% { background-position: 200% 0; } }
     </style>
 </head>
-<body class="p-4">
+<body class="p-6">
 
-    <div class="flex items-center gap-3 mb-8">
-        <img id="u-photo" src="https://t.me/i/userpic/320/personovich.jpg" class="w-12 h-12 rounded-full border border-zinc-800">
-        <div>
-            <h1 id="u-name" class="font-bold text-lg">Loading...</h1>
-            <p class="text-xs text-zinc-500">Verified Wallet</p>
+    <div class="flex flex-col items-center mt-6 mb-10">
+        <div class="relative mb-4">
+            <img id="user-avatar" src="" 
+                 class="w-24 h-24 rounded-full border-2 border-zinc-800 object-cover opacity-0 transition-opacity duration-500">
+            <div id="avatar-loader" class="absolute inset-0 w-24 h-24 rounded-full shimmer"></div>
         </div>
+        <h1 id="user-name" class="text-2xl font-bold tracking-tight text-center">...</h1>
+        <p id="user-username" class="text-zinc-500 text-sm">@username</p>
     </div>
 
-    <div id="balance-card" class="skeleton h-44 w-full mb-8">
+    <div class="card-grad w-full h-48 rounded-[35px] p-8 flex flex-col justify-between relative overflow-hidden shadow-2xl">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold mb-1">Crypto Wallet</p>
+                <p class="text-lg font-bold text-blue-500">@mj_cryptogame_bot</p>
+            </div>
+            <div class="text-xl">💎</div>
         </div>
 
-    <div class="mb-4 flex justify-between items-end">
-        <h2 class="font-bold text-xl">History</h2>
-        <span class="text-xs text-zinc-500">Recent Wins</span>
-    </div>
-
-    <div id="history-list" class="space-y-3">
-        <div class="skeleton h-16 w-full"></div>
-        <div class="skeleton h-16 w-full"></div>
-        <div class="skeleton h-16 w-full"></div>
+        <div class="flex justify-between items-end">
+            <div class="flex flex-col">
+                <span class="text-[10px] text-zinc-600 uppercase font-bold mb-1">Network Identity</span>
+                <span id="user-id-display" class="text-sm font-mono text-zinc-500 italic">ID: 0000000000</span>
+            </div>
+            <div class="opacity-10 text-xs font-black italic">MAJOR</div>
+        </div>
     </div>
 
     <script>
+        // Инициализация Telegram WebApp
         const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.headerColor = '#000000';
+        tg.expand(); // Развернуть на весь экран
+        tg.ready();  // Сообщить Telegram, что приложение готово
 
-        const user = tg.initDataUnsafe?.user || { id: 7487680515, first_name: "Major User" };
-        document.getElementById('u-name').innerText = user.first_name;
+        // Получение реальных данных пользователя
+        const user = tg.initDataUnsafe?.user;
 
-        async function fetchData() {
-            try {
-                // Замени на URL своего Ngrok
-                const res = await fetch(`/api/data?user_id=${user.id}`);
-                const data = await res.json();
+        function displayRealData() {
+            const avatarImg = document.getElementById('user-avatar');
+            const nameEl = document.getElementById('user-name');
+            const usernameEl = document.getElementById('user-username');
+            const idDisplay = document.getElementById('user-id-display');
+            const loader = document.getElementById('avatar-loader');
 
-                renderApp(data);
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        function renderApp(data) {
-            // Отрисовка карты баланса
-            const balanceCard = document.getElementById('balance-card');
-            balanceCard.classList.remove('skeleton');
-            balanceCard.innerHTML = `
-                <div class="card-grad h-full w-full rounded-[28px] p-6 flex flex-col justify-between">
-                    <div>
-                        <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Total Balance</p>
-                        <div class="flex items-baseline gap-2 mt-1">
-                            <span class="text-5xl font-black">${data.balance.toFixed(2)}</span>
-                            <span class="text-blue-500 font-bold">MJ</span>
-                        </div>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <div class="text-[10px] text-zinc-600 font-mono">**** **** **** ${user.id.toString().slice(-4)}</div>
-                        <div class="bg-blue-600/10 text-blue-500 text-[10px] px-3 py-1 rounded-full font-bold">ACTIVE</div>
-                    </div>
-                </div>
-            `;
-
-            // Отрисовка истории
-            const historyList = document.getElementById('history-list');
-            historyList.innerHTML = '';
-
-            if (data.history.length === 0) {
-                historyList.innerHTML = '<p class="text-center text-zinc-600 py-10">No wins yet...</p>';
-                return;
+            if (user) {
+                // Подставляем реальное имя
+                nameEl.innerText = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+                
+                // Подставляем реальный username
+                usernameEl.innerText = user.username ? `@${user.username}` : 'Private Profile';
+                
+                // Подставляем реальный ID
+                idDisplay.innerText = `ID: ${user.id}`;
+                
+                // Подгружаем реальное фото профиля
+                // 1. Пытаемся взять photo_url напрямую из Telegram
+                // 2. Если его нет (запрещено настройками), используем конструктор ссылок
+                if (user.photo_url) {
+                    avatarImg.src = user.photo_url;
+                } else if (user.username) {
+                    avatarImg.src = `https://t.me/i/userpic/320/${user.username}.jpg`;
+                } else {
+                    avatarImg.src = `https://t.me/i/userpic/320/default.jpg`;
+                }
+            } else {
+                // Если открыто просто в браузере (не в ТГ)
+                nameEl.innerText = "Unknown User";
+                usernameEl.innerText = "@not_connected";
+                idDisplay.innerText = "ID: 0000000000";
+                avatarImg.src = "https://t.me/i/userpic/320/default.jpg";
             }
 
-            data.history.forEach(tx => {
-                const item = document.createElement('div');
-                item.className = 'card-grad rounded-2xl p-4 flex justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-500';
-                item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center text-green-500 font-bold">MJ</div>
-                        <div>
-                            <p class="text-sm font-bold">Win in round #${tx.round}</p>
-                            <p class="text-[10px] text-zinc-500">${new Date(tx.date * 1000).toLocaleString()}</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-green-400 font-bold">+${tx.amount}</p>
-                        <p class="text-[9px] text-zinc-600 uppercase">Confirmed</p>
-                    </div>
-                `;
-                historyList.appendChild(item);
-            });
+            // Плавное появление аватарки
+            avatarImg.onload = () => {
+                avatarImg.classList.remove('opacity-0');
+                loader.style.display = 'none';
+            };
         }
 
-        setTimeout(fetchData, 1500); // Имитация красивой задержки для скелетона
+        // Запуск через 500мс для исключения багов отрисовки
+        setTimeout(displayRealData, 500);
     </script>
 </body>
 </html>
