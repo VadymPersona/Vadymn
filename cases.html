@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Major Cases</title>
+    <title>Major Shop</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -19,20 +19,31 @@
         }
         .case-card:active { transform: scale(0.97); }
         
-        /* Голубое свечение для главного кейса */
+        /* Голубое свечение */
         .glow-blue {
-            box-shadow: 0 0 20px rgba(0, 122, 255, 0.15);
-            border-color: rgba(0, 122, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 122, 255, 0.1);
+            border-color: rgba(0, 122, 255, 0.2);
         }
-        .case-img {
-            filter: drop-shadow(0 0 15px rgba(0, 122, 255, 0.5));
-            object-fit: contain;
+        
+        /* Красное свечение для Ежедневного */
+        .glow-red {
+            box-shadow: 0 0 25px rgba(255, 50, 50, 0.15);
+            border-color: rgba(255, 50, 50, 0.3);
+            background: linear-gradient(180deg, #1a0505 0%, #050505 100%);
         }
+
+        .case-img { object-fit: contain; }
+        .blue-shadow { filter: drop-shadow(0 0 15px rgba(0, 122, 255, 0.4)); }
+        .red-shadow { filter: drop-shadow(0 0 15px rgba(255, 50, 50, 0.4)); }
+
         .nav-blur {
             background: rgba(10, 10, 10, 0.8);
             backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
+        
+        /* Стиль для заблокированной кнопки */
+        .locked { opacity: 0.5; pointer-events: none; grayscale: 1; }
     </style>
 </head>
 <body class="p-6">
@@ -47,28 +58,26 @@
         <div onclick="window.location.href='case_open.html'" class="case-card glow-blue rounded-[35px] p-6 flex items-center justify-between relative overflow-hidden">
             <div class="z-10">
                 <h2 class="text-xl font-black italic uppercase leading-none mb-1 text-white">Все или<br>Ничего</h2>
-                <p class="text-[10px] text-blue-500 font-bold uppercase tracking-tighter mb-4">Шанс 0.01% на Снупа</p>
+                <p class="text-[10px] text-blue-500 font-bold uppercase tracking-tighter mb-4">Открытие каждые 5 мин</p>
                 <div class="flex items-center gap-2 bg-white/5 w-fit px-3 py-1.5 rounded-full border border-white/5">
-                    <span class="text-xs font-bold text-white">1</span>
+                    <span class="text-xs font-bold text-white">0</span>
                     <span class="text-sm">⭐</span>
                 </div>
             </div>
-            
-            <img src="case.png" class="w-32 h-32 case-img relative z-10" alt="Case" onerror="this.src='https://giftsbattle.com/cases/Porsche_911'">
-            
+            <img src="case.png" class="w-28 h-28 case-img blue-shadow relative z-10" onerror="this.src='https://giftsbattle.com/cases/Porsche_911'">
             <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-blue-600/10 blur-3xl rounded-full"></div>
         </div>
 
-        <div class="opacity-40 case-card rounded-[35px] p-6 flex items-center justify-between grayscale">
-            <div>
-                <h2 class="text-xl font-black italic uppercase leading-none mb-1">Classic</h2>
-                <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter mb-4">Будет доступно скоро</p>
-                <div class="flex items-center gap-2 bg-white/5 w-fit px-3 py-1.5 rounded-full">
-                    <span class="text-xs font-bold">5</span>
-                    <span class="text-sm">⭐</span>
+        <div id="daily-case-card" onclick="openDaily()" class="case-card glow-red rounded-[35px] p-6 flex items-center justify-between relative overflow-hidden">
+            <div class="z-10">
+                <h2 class="text-xl font-black italic uppercase leading-none mb-1 text-red-500">Ежедневный<br>Кейс</h2>
+                <p id="daily-status" class="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter mb-4">Доступен сейчас</p>
+                <div class="flex items-center gap-2 bg-red-500/20 w-fit px-3 py-1.5 rounded-full border border-red-500/20">
+                    <span class="text-[10px] font-black text-red-500 uppercase">FREE</span>
                 </div>
             </div>
-            <img src="https://giftsbattle.com/cases/Classic" class="w-28 opacity-50" alt="Case">
+            <img src="free.png" class="w-28 h-28 case-img red-shadow relative z-10" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2854/2854580.png'">
+            <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-red-600/10 blur-3xl rounded-full"></div>
         </div>
 
     </div>
@@ -90,9 +99,46 @@
 
     <script>
         const tg = window.Telegram.WebApp;
+        const DAY_MS = 24 * 60 * 60 * 1000;
+
+        function checkDailyStatus() {
+            const lastOpen = localStorage.getItem('last_daily_open');
+            const card = document.getElementById('daily-case-card');
+            const statusText = document.getElementById('daily-status');
+
+            if (lastOpen) {
+                const diff = Date.now() - parseInt(lastOpen);
+                if (diff < DAY_MS) {
+                    const remaining = DAY_MS - diff;
+                    const hours = Math.floor(remaining / (1000 * 60 * 60));
+                    const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    card.classList.add('locked');
+                    statusText.innerText = `Через ${hours}ч ${mins}м`;
+                    return false;
+                }
+            }
+            card.classList.remove('locked');
+            statusText.innerText = "Доступен сейчас";
+            return true;
+        }
+
+        function openDaily() {
+            if (!checkDailyStatus()) return;
+            
+            tg.HapticFeedback.impactOccurred('heavy');
+            // Сохраняем время открытия
+            localStorage.setItem('last_daily_open', Date.now().toString());
+            
+            // Здесь можно сделать переход на страницу открытия или показать алерт
+            tg.showAlert("Вы открыли Ежедневный кейс! Проверяйте баланс Stars и MJ.");
+            
+            checkDailyStatus();
+        }
+
+        setInterval(checkDailyStatus, 30000);
+        checkDailyStatus();
         tg.expand();
-        // Легкая вибрация при входе в магазин
-        tg.HapticFeedback.impactOccurred('light');
     </script>
 </body>
 </html>
