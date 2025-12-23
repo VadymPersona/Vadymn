@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Major Profile</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #000; color: white; font-family: -apple-system, sans-serif; padding-bottom: 80px; }
+        .card-grad { 
+            background: linear-gradient(145deg, #1a1a1a 0%, #050505 100%); 
+            border: 1px solid rgba(255,255,255,0.08); 
+            border-radius: 30px;
+        }
+        .nav-blur {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(15px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        #ton-connect-button button { background-color: #248bf2 !important; border-radius: 12px !important; width: 100% !important; }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="flex flex-col items-center mt-4 mb-8">
+        <div class="relative mb-3">
+            <img id="user-avatar" src="" class="w-20 h-20 rounded-full border-2 border-zinc-800 object-cover opacity-0 transition-opacity duration-500">
+            <div id="loader" class="absolute inset-0 bg-zinc-900 rounded-full animate-pulse"></div>
+        </div>
+        <h1 id="user-name" class="text-xl font-bold">...</h1>
+        <p id="user-username" class="text-zinc-500 text-xs">@username</p>
+    </div>
+
+    <div class="card-grad p-6 mb-6">
+        <div class="flex justify-between items-start mb-8">
+            <div>
+                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Account ID</p>
+                <p id="user-id" class="text-sm font-mono text-zinc-300 italic">ID: 00000000</p>
+            </div>
+            <div class="px-2 py-1 bg-zinc-800 rounded-lg text-[10px] text-zinc-400">VERIFIED</div>
+        </div>
+        
+        <div class="flex flex-col gap-3">
+            <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Web3 Wallet</p>
+            <div id="ton-connect-button"></div>
+        </div>
+    </div>
+
+    <div id="wallet-info" class="hidden text-center bg-green-500/10 p-3 rounded-2xl border border-green-500/20">
+        <p class="text-green-500 text-[10px] font-bold uppercase tracking-widest">Wallet Connected</p>
+        <p id="wallet-address" class="text-[9px] text-zinc-400 truncate mt-1"></p>
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 h-20 nav-blur flex justify-around items-center px-6 z-50">
+        <a href="index.html" class="flex flex-col items-center gap-1 opacity-50 active:scale-90 transition-all">
+            <span class="text-2xl">🏠</span>
+            <span class="text-[10px] font-medium uppercase tracking-tighter">Главная</span>
+        </a>
+        
+        <div class="flex flex-col items-center gap-1 text-blue-500">
+            <span class="text-2xl">👤</span>
+            <span class="text-[10px] font-bold uppercase tracking-tighter">Профиль</span>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // TON Connect
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://vadympersona.github.io/Vadymn/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect-button'
+        });
+
+        // Данные пользователя
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            document.getElementById('user-name').innerText = user.first_name;
+            document.getElementById('user-username').innerText = user.username ? `@${user.username}` : '';
+            document.getElementById('user-id').innerText = `ID: ${user.id}`;
+            
+            const avatar = document.getElementById('user-avatar');
+            avatar.src = user.photo_url || `https://t.me/i/userpic/320/${user.username || 'default'}.jpg`;
+            avatar.onload = () => {
+                avatar.classList.remove('opacity-0');
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        tonConnectUI.onStatusChange(wallet => {
+            const info = document.getElementById('wallet-info');
+            if (wallet) {
+                info.classList.remove('hidden');
+                document.getElementById('wallet-address').innerText = wallet.account.address;
+            } else {
+                info.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
