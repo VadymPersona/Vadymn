@@ -52,7 +52,7 @@
                 <div id="avatar-loader" class="absolute inset-0 w-12 h-12 rounded-full bg-zinc-900 animate-pulse"></div>
             </div>
             <div>
-                <h1 id="user-name" class="text-sm font-bold tracking-tight">...</h1>
+                <h1 id="user-name" class="text-sm font-bold tracking-tight text-white">Загрузка...</h1>
                 <p class="text-[10px] text-zinc-500 uppercase tracking-tighter">Verified User</p>
             </div>
         </div>
@@ -117,9 +117,9 @@
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="toggleModal(false)"></div>
         <div class="relative w-full bg-zinc-950 rounded-t-[40px] p-8 border-t border-white/10 shadow-2xl">
             <div class="w-12 h-1 bg-zinc-800 rounded-full mx-auto mb-8"></div>
-            <h2 class="text-xl font-bold mb-6 text-center">Метод пополнения</h2>
+            <h2 class="text-xl font-bold mb-6 text-center text-white">Метод пополнения</h2>
             <div class="flex flex-col gap-3">
-                <button onclick="processTransaction()" class="ton-btn w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95">Пополнить TON</button>
+                <button onclick="processTransaction()" class="ton-btn w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 text-white">Пополнить TON</button>
                 <button onclick="payWithStars()" class="stars-btn w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95">Купить Stars ⭐</button>
             </div>
         </div>
@@ -130,12 +130,23 @@
             <span class="text-2xl">🏠</span>
             <span class="text-[10px] font-bold uppercase tracking-widest">Главная</span>
         </div>
-        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40"><span class="text-2xl">📦</span><span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Кейсы</span></a>
-        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40"><span class="text-2xl">👤</span><span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Профиль</span></a>
+        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40">
+            <span class="text-2xl">📦</span>
+            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Кейсы</span>
+        </a>
+        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40">
+            <span class="text-2xl">👤</span>
+            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Профиль</span>
+        </a>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
+        
+        // 1. Сообщаем, что приложение готово и разворачиваем его
+        tg.ready();
+        tg.expand();
+
         const SERVER_URL = "https://vadympersona.github.io/Vadymn/"; 
         const MY_ADDRESS = "UQBAshgLU8AMuBwOQjzbpE127NjtI8g9PfoVtGtVCy9SS_kg";
 
@@ -144,12 +155,43 @@
             buttonRootId: 'ton-connect-trigger'
         });
 
+        // Функция загрузки данных пользователя
+        function initUserData() {
+            const user = tg.initDataUnsafe?.user;
+            const nameEl = document.getElementById('user-name');
+            const idEl = document.getElementById('user-id-display');
+            const avatar = document.getElementById('user-avatar');
+            const loader = document.getElementById('avatar-loader');
+
+            if (user) {
+                nameEl.innerText = user.first_name || "Major User";
+                idEl.innerText = `ID: ${user.id}`;
+                
+                // Формируем URL аватара
+                const photoUrl = user.photo_url || `https://ui-avatars.com/api/?name=${user.first_name}&background=007AFF&color=fff`;
+                avatar.src = photoUrl;
+                avatar.onload = () => {
+                    avatar.classList.remove('opacity-0');
+                    if (loader) loader.style.display = 'none';
+                };
+            } else {
+                // Если данных нет (тест вне ТГ)
+                nameEl.innerText = "Guest Mode";
+                idEl.innerText = "ID: 00000000";
+                if (loader) loader.style.display = 'none';
+                avatar.classList.remove('opacity-0');
+                avatar.src = "https://ui-avatars.com/api/?name=Guest";
+            }
+        }
+
         async function getTonPrice() {
             try {
                 const response = await fetch('https://api.coinbase.com/v2/prices/TON-USD/spot');
                 const data = await response.json();
                 document.getElementById('ton-price').innerText = `$${parseFloat(data.data.amount).toFixed(2)}`;
-            } catch (e) { document.getElementById('ton-price').innerText = "$5.40"; }
+            } catch (e) { 
+                document.getElementById('ton-price').innerText = "$5.40"; 
+            }
         }
 
         async function syncBalance() {
@@ -162,7 +204,7 @@
                     document.getElementById('display-balance').innerText = data.ton_balance.toFixed(2);
                     document.getElementById('stars-balance').innerText = data.stars_balance || 0;
                 }
-            } catch (e) { }
+            } catch (e) { console.log("Balance sync error"); }
         }
 
         function toggleModal(show) {
@@ -174,34 +216,32 @@
 
         async function payWithStars() {
             toggleModal(false);
-            tg.showAlert("Инвойс формируется... (нужен бэкенд для ссылки)");
-            // Логика вызова tg.openInvoice здесь
+            tg.showAlert("Инвойс формируется... Необходим серверный API.");
         }
 
         async function processTransaction() {
-            if (!tonConnectUI.connected) { await tonConnectUI.openModal(); return; }
+            if (!tonConnectUI.connected) { 
+                await tonConnectUI.openModal(); 
+                return; 
+            }
             const tx = {
                 validUntil: Math.floor(Date.now() / 1000) + 600,
-                messages: [{ address: MY_ADDRESS, amount: "100000000", payload: btoa(tg.initDataUnsafe?.user?.id.toString()) }]
+                messages: [{ 
+                    address: MY_ADDRESS, 
+                    amount: "100000000", 
+                    payload: btoa(tg.initDataUnsafe?.user?.id.toString() || "0") 
+                }]
             };
-            try { toggleModal(false); await tonConnectUI.sendTransaction(tx); } catch (e) { }
+            try { 
+                toggleModal(false); 
+                await tonConnectUI.sendTransaction(tx); 
+            } catch (e) { console.error(e); }
         }
 
-        const user = tg.initDataUnsafe?.user;
-        if (user) {
-            document.getElementById('user-name').innerText = user.first_name;
-            document.getElementById('user-id-display').innerText = `ID: ${user.id}`;
-            const avatar = document.getElementById('user-avatar');
-            avatar.src = user.photo_url || `https://t.me/i/userpic/320/${user.username || 'default'}.jpg`;
-            avatar.onload = () => {
-                avatar.classList.remove('opacity-0');
-                document.getElementById('avatar-loader').style.display = 'none';
-            }
-        }
-
+        // Запуск
+        initUserData();
         getTonPrice();
         syncBalance();
-        tg.expand();
     </script>
 </body>
 </html>

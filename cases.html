@@ -15,9 +15,10 @@
         .case-card {
             background: linear-gradient(180deg, #0f0f0f 0%, #050505 100%);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
-        .case-card:active { transform: scale(0.97); }
+        .case-card:active { transform: scale(0.96); opacity: 0.8; }
         
         /* Голубое свечение */
         .glow-blue {
@@ -41,9 +42,6 @@
             backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
-        
-        /* Стиль для заблокированной кнопки */
-        .locked { opacity: 0.5; pointer-events: none; grayscale: 1; }
     </style>
 </head>
 <body class="p-6">
@@ -68,10 +66,10 @@
             <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-blue-600/10 blur-3xl rounded-full"></div>
         </div>
 
-        <div id="daily-case-card" onclick="openDaily()" class="case-card glow-red rounded-[35px] p-6 flex items-center justify-between relative overflow-hidden">
+        <div onclick="openDaily()" class="case-card glow-red rounded-[35px] p-6 flex items-center justify-between relative overflow-hidden">
             <div class="z-10">
                 <h2 class="text-xl font-black italic uppercase leading-none mb-1 text-red-500">Ежедневный<br>Кейс</h2>
-                <p id="daily-status" class="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter mb-4">Доступен сейчас</p>
+                <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mb-4">Доступен без ограничений</p>
                 <div class="flex items-center gap-2 bg-red-500/20 w-fit px-3 py-1.5 rounded-full border border-red-500/20">
                     <span class="text-[10px] font-black text-red-500 uppercase">FREE</span>
                 </div>
@@ -99,45 +97,17 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        const DAY_MS = 24 * 60 * 60 * 1000;
-
-        function checkDailyStatus() {
-            const lastOpen = localStorage.getItem('last_daily_open');
-            const card = document.getElementById('daily-case-card');
-            const statusText = document.getElementById('daily-status');
-
-            if (lastOpen) {
-                const diff = Date.now() - parseInt(lastOpen);
-                if (diff < DAY_MS) {
-                    const remaining = DAY_MS - diff;
-                    const hours = Math.floor(remaining / (1000 * 60 * 60));
-                    const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-                    
-                    card.classList.add('locked');
-                    statusText.innerText = `Через ${hours}ч ${mins}м`;
-                    return false;
-                }
-            }
-            card.classList.remove('locked');
-            statusText.innerText = "Доступен сейчас";
-            return true;
-        }
 
         function openDaily() {
-            if (!checkDailyStatus()) return;
+            // Вибрация при нажатии
+            tg.HapticFeedback.impactOccurred('medium');
             
-            tg.HapticFeedback.impactOccurred('heavy');
-            // Сохраняем время открытия
-            localStorage.setItem('last_daily_open', Date.now().toString());
-            
-            // Здесь можно сделать переход на страницу открытия или показать алерт
-            tg.showAlert("Вы открыли Ежедневный кейс! Проверяйте баланс Stars и MJ.");
-            
-            checkDailyStatus();
+            // Переход на страницу открытия ежедневного кейса
+            window.location.href = 'free_case.html';
         }
 
-        setInterval(checkDailyStatus, 30000);
-        checkDailyStatus();
+        // Инициализация
+        tg.ready();
         tg.expand();
     </script>
 </body>
