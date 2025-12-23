@@ -15,7 +15,6 @@
             filter: blur(100px); z-index: -1;
         }
 
-        /* Рулетка */
         .roulette-wrapper {
             position: relative; width: 100%; height: 160px;
             background: rgba(255,255,255,0.02);
@@ -40,7 +39,6 @@
             transform: translateX(-50%); box-shadow: 0 0 15px #ff3b3b;
         }
 
-        /* Сетка содержимого */
         .content-grid {
             display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
             padding: 4px;
@@ -54,14 +52,19 @@
             align-items: center; justify-content: center;
             padding: 8px;
         }
-        .item-card img {
-            width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
-        }
+        .item-card img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
 
         .btn-daily {
             background: #ff3b3b; color: #fff; border-radius: 20px;
             font-weight: 900; text-transform: uppercase; letter-spacing: 1px;
             box-shadow: 0 10px 20px rgba(255, 59, 59, 0.2);
+            transition: all 0.3s;
+        }
+        .btn-daily:disabled {
+            background: #222;
+            color: #555;
+            box-shadow: none;
+            transform: none !important;
         }
     </style>
 </head>
@@ -78,7 +81,7 @@
         <img src="free.png" class="w-48 drop-shadow-[0_0_30px_rgba(255,0,0,0.3)] mb-6" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2854/2854580.png'">
         
         <h1 class="text-2xl font-black italic uppercase mb-2">Ежедневный Кейс</h1>
-        <p class="text-zinc-500 text-[10px] mb-8 px-10 leading-relaxed uppercase tracking-tighter">
+        <p id="cooldown-text" class="text-zinc-500 text-[10px] mb-8 px-10 leading-relaxed uppercase tracking-tighter">
             Шанс на <span class="text-white">Звезды ⭐</span> и редкие <span class="text-white">NFT</span>
         </p>
         
@@ -88,13 +91,11 @@
 
         <div class="w-full bg-zinc-900/50 p-4 rounded-[30px] border border-white/5">
             <p class="text-[9px] uppercase font-black text-zinc-500 mb-4 tracking-widest">Внутри этого кейса:</p>
-            
             <div class="content-grid">
                 <div class="item-card"><span class="text-sm font-black">1⭐</span></div>
                 <div class="item-card"><span class="text-sm font-black text-yellow-500">3⭐</span></div>
                 <div class="item-card"><span class="text-sm font-black text-yellow-500">8⭐</span></div>
                 <div class="item-card"><span class="text-sm font-black text-yellow-500">14⭐</span></div>
-                
                 <div class="item-card"><img src="https://nft.fragment.com/gift/candycane-6790.large.jpg"></div>
                 <div class="item-card"><img src="https://nft.fragment.com/gift/skullflower-6790.large.jpg"></div>
                 <div class="item-card"><img src="https://nft.fragment.com/gift/instantramen-6790.large.jpg"></div>
@@ -118,23 +119,44 @@
 
     <script>
         const tg = window.Telegram.WebApp;
+        const COOLDOWN_MS = 24 * 60 * 60 * 1000;
         let isSpinning = false;
 
         const PRIZES = [
             { id: '1s', val: '1', type: 'star', prob: 60 },
             { id: '3s', val: '3', type: 'star', prob: 20 },
             { id: '8s', val: '8', type: 'star', prob: 12 },
-            { id: '14s', val: '14', type: 'star', prob: 1 },
-            { id: 'nft1', img: 'https://nft.fragment.com/gift/candycane-6790.large.jpg', type: 'nft' },
-            { id: 'nft2', img: 'https://nft.fragment.com/gift/skullflower-6790.large.jpg', type: 'nft' },
-            { id: 'nft3', img: 'https://nft.fragment.com/gift/instantramen-6790.large.jpg', type: 'nft' },
-            { id: 'nft4', img: 'https://nft.fragment.com/gift/lolpop-6799.large.jpg', type: 'nft' }
+            { id: '14s', val: '14', type: 'star', prob: 1 }
         ];
 
+        // Проверка КД при загрузке
+        function checkCooldown() {
+            const lastOpen = localStorage.getItem('last_daily_open');
+            const btn = document.getElementById('open-btn');
+            const cdText = document.getElementById('cooldown-text');
+
+            if (lastOpen) {
+                const elapsed = Date.now() - parseInt(lastOpen);
+                if (elapsed < COOLDOWN_MS) {
+                    const remaining = COOLDOWN_MS - elapsed;
+                    const h = Math.floor(remaining / 3600000);
+                    const m = Math.floor((remaining % 3600000) / 60000);
+                    
+                    btn.disabled = true;
+                    btn.innerText = `Доступно через ${h}ч ${m}м`;
+                    return false;
+                }
+            }
+            return true;
+        }
+
         function startSpin() {
-            if(isSpinning) return;
+            if(isSpinning || !checkCooldown()) return;
+            
             isSpinning = true;
+            // Сохраняем время открытия СРАЗУ при начале прокрутки
             localStorage.setItem('last_daily_open', Date.now().toString());
+
             document.getElementById('preview').style.display = 'none';
             document.getElementById('roulette').style.display = 'block';
             setupTrack();
@@ -156,20 +178,8 @@
             for (let i = 0; i < totalSlots; i++) {
                 const slot = document.createElement('div');
                 slot.className = 'slot';
-                
-                let prize;
-                if (i === stopIndex) {
-                    prize = winningPrize;
-                } else {
-                    prize = PRIZES[Math.floor(Math.random() * PRIZES.length)];
-                }
-
-                if (prize.type === 'star') {
-                    slot.innerHTML = `<span class="text-2xl font-black">${prize.val}</span><span class="text-yellow-500 text-[10px] font-bold">STARS</span>`;
-                } else {
-                    // NFT в рулетке теперь тоже яркие
-                    slot.innerHTML = `<img src="${prize.img}" class="w-20 h-20 rounded-xl object-cover">`;
-                }
+                let prize = (i === stopIndex) ? winningPrize : PRIZES[Math.floor(Math.random() * PRIZES.length)];
+                slot.innerHTML = `<span class="text-2xl font-black">${prize.val}</span><span class="text-yellow-500 text-[10px] font-bold">STARS</span>`;
                 track.appendChild(slot);
             }
 
@@ -187,9 +197,7 @@
                 }, 140);
             }, 100);
 
-            setTimeout(() => {
-                showResult(winningPrize);
-            }, 8500);
+            setTimeout(() => { showResult(winningPrize); }, 8500);
         }
 
         function showResult(prize) {
@@ -201,6 +209,8 @@
             tg.HapticFeedback.notificationOccurred('success');
         }
 
+        // Инициализация страницы
+        checkCooldown();
         tg.expand();
     </script>
 </body>
