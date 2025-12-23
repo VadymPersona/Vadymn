@@ -85,7 +85,7 @@
         const COOLDOWN_MS = 5 * 60 * 1000; // 5 минут
 
         function updateTimer() {
-            const lastOpen = localStorage.getItem('last_open_time');
+            const lastOpen = localStorage.getItem('last_open_time_premium');
             if (!lastOpen) return;
 
             const now = Date.now();
@@ -111,7 +111,8 @@
 
         function handlePayment() {
             if(isSpinning) return;
-            localStorage.setItem('last_open_time', Date.now().toString());
+            // Устанавливаем кулдаун сразу при нажатии
+            localStorage.setItem('last_open_time_premium', Date.now().toString());
             tg.HapticFeedback.impactOccurred('medium');
             startSpin();
         }
@@ -132,7 +133,6 @@
             track.style.transition = 'none';
             track.style.transform = 'translateX(0)';
 
-            // Генерируем ленту: выбираем случайную ячейку для остановки (от 50 до 70)
             const stopIndex = Math.floor(Math.random() * 20) + 50; 
             const totalSlots = stopIndex + 10;
 
@@ -140,7 +140,6 @@
                 const slot = document.createElement('div');
                 slot.className = 'slot';
                 
-                // Рандомно раскидываем призы вокруг места остановки для азарта
                 if (i !== stopIndex && (i % 7 === 0 || i === stopIndex - 1 || i === stopIndex + 1)) {
                     slot.innerHTML = `<img src="${WIN_IMG}" class="w-20 h-20 rounded-[20px] object-cover opacity-60">`;
                 } else {
@@ -153,7 +152,7 @@
                 track.style.transition = 'transform 8s cubic-bezier(0.1, 0, 0.05, 1)';
                 const slotWidth = 136; 
                 const center = window.innerWidth / 2;
-                const randomShift = Math.floor(Math.random() * 80) - 40; // Еще больше рандома в позиции
+                const randomShift = Math.floor(Math.random() * 80) - 40;
                 const finalPos = (stopIndex * slotWidth) + (slotWidth / 2) - center + randomShift;
                 
                 track.style.transform = `translateX(-${finalPos}px)`;
@@ -172,6 +171,15 @@
                 resultArea.classList.remove('hidden');
                 resultMsg.innerText = "💀 ПОВЕЗЕТ В СЛЕДУЮЩИЙ РАЗ";
                 resultMsg.style.color = "#444";
+
+                // --- ФУНКЦИОНАЛ ДЛЯ ЛЕНТЫ ---
+                const dropData = {
+                    type: 'empty', // Указываем, что выпала пустота
+                    val: null
+                };
+                sessionStorage.setItem('last_drop', JSON.stringify(dropData));
+                // ----------------------------
+
                 tg.HapticFeedback.notificationOccurred('error');
                 isSpinning = false;
             }, 8500);
@@ -179,11 +187,8 @@
 
         function resetGame() {
             tg.HapticFeedback.impactOccurred('light');
-            document.getElementById('result-area').classList.add('hidden');
-            document.getElementById('roulette').style.display = 'none';
-            document.getElementById('preview').style.display = 'flex';
-            document.getElementById('preview').style.opacity = '1';
-            updateTimer();
+            // Редирект на cases.html, чтобы скрипт ленты подхватил sessionStorage
+            window.location.href = 'cases.html';
         }
 
         updateTimer();

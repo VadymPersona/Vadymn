@@ -112,7 +112,7 @@
     <div id="result-area" class="mt-4 text-center hidden flex flex-col items-center">
         <p id="result-msg" class="text-3xl font-black italic uppercase mb-2"></p>
         <p id="sub-msg" class="text-zinc-500 text-[10px] mb-10 uppercase tracking-widest"></p>
-        <button onclick="window.location.href='index.html'" class="w-64 py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all">
+        <button onclick="window.location.href='cases.html'" class="w-64 py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all">
             В Кошелек
         </button>
     </div>
@@ -126,14 +126,12 @@
             { id: '1s', val: '1', type: 'star', prob: 60 },
             { id: '3s', val: '3', type: 'star', prob: 20 },
             { id: '8s', val: '8', type: 'star', prob: 12 },
-            { id: '14s', val: '14', type: 'star', prob: 1 }
+            { id: '14s', val: '14', type: 'star', prob: 8 }
         ];
 
-        // Проверка КД при загрузке
         function checkCooldown() {
             const lastOpen = localStorage.getItem('last_daily_open');
             const btn = document.getElementById('open-btn');
-            const cdText = document.getElementById('cooldown-text');
 
             if (lastOpen) {
                 const elapsed = Date.now() - parseInt(lastOpen);
@@ -154,7 +152,6 @@
             if(isSpinning || !checkCooldown()) return;
             
             isSpinning = true;
-            // Сохраняем время открытия СРАЗУ при начале прокрутки
             localStorage.setItem('last_daily_open', Date.now().toString());
 
             document.getElementById('preview').style.display = 'none';
@@ -170,7 +167,8 @@
             let winningPrize;
             if (rand < 60) winningPrize = PRIZES[0];
             else if (rand < 80) winningPrize = PRIZES[1];
-            else winningPrize = PRIZES[2];
+            else if (rand < 92) winningPrize = PRIZES[2];
+            else winningPrize = PRIZES[3];
 
             const stopIndex = 50; 
             const totalSlots = 65;
@@ -206,10 +204,19 @@
             document.getElementById('roulette').style.opacity = '0.2';
             document.getElementById('result-msg').innerText = `+${prize.val} ЗВЕЗД`;
             document.getElementById('sub-msg').innerText = "Награда добавлена в ваш профиль";
+
+            // --- СОХРАНЕНИЕ ДАННЫХ ДЛЯ ЛЕНТЫ В cases.html ---
+            const dropData = {
+                type: 'star',
+                val: prize.val
+            };
+            sessionStorage.setItem('last_drop', JSON.stringify(dropData));
+            // -----------------------------------------------
+
             tg.HapticFeedback.notificationOccurred('success');
+            isSpinning = false;
         }
 
-        // Инициализация страницы
         checkCooldown();
         tg.expand();
     </script>

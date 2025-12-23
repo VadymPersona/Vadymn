@@ -11,6 +11,7 @@
             background-color: #000; color: white; 
             font-family: -apple-system, sans-serif;
             padding-bottom: 100px;
+            overflow-x: hidden;
         }
         .case-card {
             background: linear-gradient(180deg, #0f0f0f 0%, #050505 100%);
@@ -48,14 +49,50 @@
             backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
+
+        /* Стиль ленты Drops */
+        .feed-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 12px;
+            padding: 4px 0;
+            scrollbar-width: none;
+        }
+        .feed-container::-webkit-scrollbar { display: none; }
+
+        .feed-item {
+            flex: 0 0 auto;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
     </style>
 </head>
 <body class="p-6">
 
-    <div class="mb-8">
-        <h1 class="text-3xl font-black italic tracking-tighter uppercase text-white">Кейсы</h1>
-        <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Удача любит смелых</p>
+    <div class="mb-6 flex justify-between items-end">
+        <div>
+            <h1 class="text-3xl font-black italic tracking-tighter uppercase text-white">Кейсы</h1>
+            <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Live Drops</p>
+        </div>
+        <div class="flex items-center gap-1.5 mb-1">
+            <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+            <span class="text-[9px] text-green-500 font-black uppercase">Online</span>
+        </div>
     </div>
+
+    <div id="live-feed" class="feed-container mb-10">
+        </div>
 
     <div class="grid grid-cols-1 gap-4">
         
@@ -101,52 +138,119 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        const COOLDOWN_TIME = 24 * 60 * 60 * 1000; // 24 часа
+        const feed = document.getElementById('live-feed');
+        const COOLDOWN_TIME = 24 * 60 * 60 * 1000;
+
+        const NFTS = [
+            { img: 'https://nft.fragment.com/gift/candycane-6790.large.jpg', link: 'https://t.me/nft/CandyCane-6790' },
+            { img: 'https://nft.fragment.com/gift/skullflower-6790.large.jpg', link: 'https://t.me/nft/SkullFlower-6790' },
+            { img: 'https://nft.fragment.com/gift/instantramen-6790.large.jpg', link: 'https://t.me/nft/InstantRamen-6790' }
+        ];
+
+        // --- ЛОГИКА СОХРАНЕНИЯ ЛЕНТЫ ---
+        
+        function loadFeedHistory() {
+            const history = JSON.parse(localStorage.getItem('drops_history') || '[]');
+            feed.innerHTML = '';
+            // Рендерим от старых к новым (prepend в DOM сделает правильный порядок)
+            history.reverse().forEach(drop => renderDrop(drop, false));
+        }
+
+        function saveDropToHistory(dropData) {
+            let history = JSON.parse(localStorage.getItem('drops_history') || '[]');
+            history.unshift(dropData);
+            if (history.length > 15) history.pop();
+            localStorage.setItem('drops_history', JSON.stringify(history));
+        }
+
+        function renderDrop(data, animate = true) {
+            const item = document.createElement('div');
+            item.className = 'feed-item';
+            if (!animate) item.style.animation = 'none';
+            
+            let prizeHtml = '';
+            if (data.type === 'nft') {
+                prizeHtml = `<a href="${data.link}" target="_blank"><img src="${data.img}" class="w-8 h-8 rounded-lg border border-red-500/30 shadow-lg shadow-red-500/10"></a>`;
+            } else if (data.type === 'star') {
+                prizeHtml = `<div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20"><span class="text-[10px] font-black text-yellow-500">${data.val}⭐</span></div>`;
+            } else {
+                prizeHtml = `<span class="text-[10px] font-bold text-zinc-600 uppercase">💨 Пусто</span>`;
+            }
+
+            item.innerHTML = `
+                <img src="https://ui-avatars.com/api/?name=${data.user.replace('@','')}&background=random" class="w-7 h-7 rounded-full border border-white/10">
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-bold text-zinc-400 leading-none mb-1">${data.user}</span>
+                    ${prizeHtml}
+                </div>
+            `;
+            feed.prepend(item);
+        }
+
+        function pushDrop(user, type, val, img = null, link = null) {
+            const dropData = { user, type, val, img, link, time: Date.now() };
+            renderDrop(dropData, true);
+            saveDropToHistory(dropData);
+            if (feed.children.length > 15) feed.removeChild(feed.lastChild);
+        }
+
+        // --- ЦИКЛЫ И ПРОВЕРКИ ---
+
+        function personovichCycle() {
+            const nft = NFTS[Math.floor(Math.random() * NFTS.length)];
+            pushDrop('@personovich', 'nft', null, nft.img, nft.link);
+            const nextDrop = Math.floor(Math.random() * (240000 - 120000 + 1) + 120000);
+            setTimeout(personovichCycle, nextDrop);
+        }
+
+        function checkMyDrop() {
+            const myDrop = sessionStorage.getItem('last_drop');
+            if (myDrop) {
+                const data = JSON.parse(myDrop);
+                const myName = tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || "Me";
+                pushDrop(`@${myName}`, data.type, data.val);
+                sessionStorage.removeItem('last_drop');
+            }
+        }
 
         function updateDailyCooldown() {
             const lastOpen = localStorage.getItem('last_daily_open');
             const card = document.getElementById('daily-card');
             const status = document.getElementById('daily-status');
-            const badge = document.getElementById('daily-badge');
-
             if (lastOpen) {
-                const now = Date.now();
-                const timePassed = now - parseInt(lastOpen);
-
-                if (timePassed < COOLDOWN_TIME) {
-                    const timeLeft = COOLDOWN_TIME - timePassed;
-                    
-                    // Расчет часов и минут
-                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-
+                const diff = Date.now() - parseInt(lastOpen);
+                if (diff < COOLDOWN_TIME) {
                     card.classList.add('locked');
-                    status.innerText = `Доступно через ${hours}ч ${minutes}м`;
-                    status.classList.replace('text-zinc-400', 'text-zinc-500');
-                    return false;
+                    const remaining = COOLDOWN_TIME - diff;
+                    const h = Math.floor(remaining / 3600000);
+                    const m = Math.floor((remaining % 3600000) / 60000);
+                    status.innerText = `Доступно через ${h}ч ${m}м`;
+                    return;
                 }
             }
-            
-            // Если КД прошло или еще не открывали
             card.classList.remove('locked');
             status.innerText = "Доступен сейчас!";
-            status.classList.replace('text-zinc-500', 'text-zinc-400');
-            return true;
         }
 
         function openDaily() {
-            if (updateDailyCooldown()) {
-                tg.HapticFeedback.impactOccurred('medium');
-                // Важно: время открытия фиксируется в файле free_case.html после нажатия кнопки "Открыть"
-                window.location.href = 'free_case.html';
-            }
+            tg.HapticFeedback.impactOccurred('medium');
+            window.location.href = 'free_case.html';
         }
 
-        // Запуск проверки
+        // Инициализация
+        loadFeedHistory();
+        checkMyDrop();
         updateDailyCooldown();
-        // Обновляем текст каждую минуту
-        setInterval(updateDailyCooldown, 60000);
+        
+        // Запуск цикла персонажа если история пуста
+        const history = JSON.parse(localStorage.getItem('drops_history') || '[]');
+        if (history.length === 0) {
+            personovichCycle(); 
+        } else {
+            setTimeout(personovichCycle, 120000);
+        }
 
+        setInterval(updateDailyCooldown, 60000);
         tg.ready();
         tg.expand();
     </script>
