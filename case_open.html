@@ -8,13 +8,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; }
-
         .bg-glow {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 300px; height: 300px; background: rgba(0, 122, 255, 0.15);
             filter: blur(100px); z-index: -1;
         }
-
         .roulette-wrapper {
             position: relative; width: 100%; height: 160px;
             background: rgba(255,255,255,0.02);
@@ -22,41 +20,30 @@
             border-bottom: 1px solid rgba(255,255,255,0.05);
             margin: 40px 0; display: none;
         }
-        
         .track {
             display: flex; position: absolute; left: 0; top: 20px;
             transition: transform 8s cubic-bezier(0.1, 0, 0.05, 1);
             will-change: transform; align-items: center;
         }
-
         .slot {
             min-width: 120px; height: 120px; margin: 0 8px;
             background: #0a0a0a; border-radius: 30px;
             display: flex; align-items: center; justify-content: center;
             border: 1px solid rgba(255,255,255,0.05);
-            flex-direction: column;
         }
-
         .selector {
             position: absolute; left: 50%; top: 0; bottom: 0;
             width: 4px; background: #fff; z-index: 10;
             transform: translateX(-50%); box-shadow: 0 0 15px #fff;
         }
-
         .btn-main {
             background: #fff; color: #000; border-radius: 24px;
             font-weight: 900; text-transform: uppercase; letter-spacing: 1px;
             transition: all 0.2s;
         }
-        .btn-main:active { transform: scale(0.95); opacity: 0.8; }
-
+        .btn-main:disabled { background: #222; color: #444; transform: none; opacity: 1; }
         .nothing-text { font-size: 10px; color: #333; font-weight: 800; text-transform: uppercase; }
-        
-        #retry-btn {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
+        #retry-btn { background: rgba(255,255,255,0.1); color: white; }
     </style>
 </head>
 <body class="flex flex-col items-center min-h-screen p-6">
@@ -71,11 +58,12 @@
     <div id="preview" class="flex flex-col items-center text-center">
         <img src="case.png" class="w-64 drop-shadow-[0_0_30px_rgba(0,122,255,0.3)] mb-6" onerror="this.src='https://giftsbattle.com/cases/Porsche_911'">
         <h1 class="text-3xl font-black italic uppercase mb-2">Все или Ничего</h1>
-        <p class="text-zinc-500 text-xs mb-10 px-10 leading-relaxed">Рискни одной звездой, чтобы получить <span class="text-white">Snoop Cigar</span>.</p>
+        <p class="text-zinc-500 text-xs mb-10 px-10 leading-relaxed">Бесплатное открытие каждые 5 минут.</p>
         
-        <button onclick="handlePayment()" class="btn-main w-64 py-5 shadow-xl shadow-white/5">
+        <button id="open-btn" onclick="handlePayment()" class="btn-main w-64 py-5 shadow-xl">
             Открыть за 0 ⭐
         </button>
+        <p id="timer-display" class="mt-4 text-blue-500 font-bold hidden"></p>
     </div>
 
     <div id="roulette" class="roulette-wrapper">
@@ -86,7 +74,7 @@
     <div id="result-area" class="mt-4 text-center hidden flex flex-col items-center">
         <p id="result-msg" class="text-lg font-bold italic uppercase mb-6"></p>
         <button id="retry-btn" onclick="resetGame()" class="w-64 py-5 rounded-[24px] font-black uppercase tracking-widest active:scale-95 transition-all">
-            Попробовать еще раз
+            Вернуться
         </button>
     </div>
 
@@ -94,9 +82,36 @@
         const tg = window.Telegram.WebApp;
         const WIN_IMG = "https://nft.fragment.com/gift/SnoopCigar-2.large.jpg";
         let isSpinning = false;
-        
+        const COOLDOWN_MS = 5 * 60 * 1000; // 5 минут
+
+        function updateTimer() {
+            const lastOpen = localStorage.getItem('last_open_time');
+            if (!lastOpen) return;
+
+            const now = Date.now();
+            const diff = now - parseInt(lastOpen);
+            const btn = document.getElementById('open-btn');
+            const display = document.getElementById('timer-display');
+
+            if (diff < COOLDOWN_MS) {
+                const remaining = Math.ceil((COOLDOWN_MS - diff) / 1000);
+                const mins = Math.floor(remaining / 60);
+                const secs = remaining % 60;
+                btn.disabled = true;
+                btn.innerText = "Ждите...";
+                display.classList.remove('hidden');
+                display.innerText = `Доступно через: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                setTimeout(updateTimer, 1000);
+            } else {
+                btn.disabled = false;
+                btn.innerText = "Открыть за 0 ⭐";
+                display.classList.add('hidden');
+            }
+        }
+
         function handlePayment() {
             if(isSpinning) return;
+            localStorage.setItem('last_open_time', Date.now().toString());
             tg.HapticFeedback.impactOccurred('medium');
             startSpin();
         }
@@ -113,29 +128,24 @@
 
         function setupTrack() {
             const track = document.getElementById('track');
-            track.innerHTML = ''; // Очистка
+            track.innerHTML = '';
             track.style.transition = 'none';
             track.style.transform = 'translateX(0)';
 
-            // Всегда проигрыш по твоему запросу
-            const isWinner = false; 
-            
-            for (let i = 0; i < 60; i++) {
+            // Генерируем ленту: выбираем случайную ячейку для остановки (от 50 до 70)
+            const stopIndex = Math.floor(Math.random() * 20) + 50; 
+            const totalSlots = stopIndex + 10;
+
+            for (let i = 0; i < totalSlots; i++) {
                 const slot = document.createElement('div');
                 slot.className = 'slot';
                 
-                // Расставляем призы для байта
-                if (i % 6 === 0 || i === 54 || i === 56) {
-                    slot.innerHTML = `<img src="${WIN_IMG}" class="w-20 h-20 rounded-[20px] object-cover opacity-80">`;
+                // Рандомно раскидываем призы вокруг места остановки для азарта
+                if (i !== stopIndex && (i % 7 === 0 || i === stopIndex - 1 || i === stopIndex + 1)) {
+                    slot.innerHTML = `<img src="${WIN_IMG}" class="w-20 h-20 rounded-[20px] object-cover opacity-60">`;
                 } else {
                     slot.innerHTML = `<span class="nothing-text">Ничего</span>`;
                 }
-                
-                // 55-й слот (центральный при остановке) ВСЕГДА пустой
-                if (i === 55) {
-                    slot.innerHTML = `<span class="nothing-text">Ничего</span>`;
-                }
-
                 track.appendChild(slot);
             }
 
@@ -143,10 +153,8 @@
                 track.style.transition = 'transform 8s cubic-bezier(0.1, 0, 0.05, 1)';
                 const slotWidth = 136; 
                 const center = window.innerWidth / 2;
-                
-                // Рандомное смещение внутри слота, чтобы каждый раз останавливалось чуть иначе
-                const randomOffset = Math.floor(Math.random() * 60) - 30; 
-                const finalPos = (55 * slotWidth) + (slotWidth / 2) - center + randomOffset;
+                const randomShift = Math.floor(Math.random() * 80) - 40; // Еще больше рандома в позиции
+                const finalPos = (stopIndex * slotWidth) + (slotWidth / 2) - center + randomShift;
                 
                 track.style.transform = `translateX(-${finalPos}px)`;
                 
@@ -154,18 +162,16 @@
                 const interval = setInterval(() => {
                     tg.HapticFeedback.impactOccurred('light');
                     currentTick++;
-                    if (currentTick > 55) clearInterval(interval);
+                    if (currentTick > 60) clearInterval(interval);
                 }, 130);
             }, 100);
 
             setTimeout(() => {
                 const resultArea = document.getElementById('result-area');
                 const resultMsg = document.getElementById('result-msg');
-                
                 resultArea.classList.remove('hidden');
                 resultMsg.innerText = "💀 ПОВЕЗЕТ В СЛЕДУЮЩИЙ РАЗ";
-                resultMsg.style.color = "#333";
-                
+                resultMsg.style.color = "#444";
                 tg.HapticFeedback.notificationOccurred('error');
                 isSpinning = false;
             }, 8500);
@@ -177,10 +183,10 @@
             document.getElementById('roulette').style.display = 'none';
             document.getElementById('preview').style.display = 'flex';
             document.getElementById('preview').style.opacity = '1';
-            const track = document.getElementById('track');
-            track.innerHTML = '';
+            updateTimer();
         }
 
+        updateTimer();
         tg.expand();
     </script>
 </body>
