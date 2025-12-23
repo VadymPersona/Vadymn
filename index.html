@@ -80,25 +80,19 @@
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal(false)"></div>
         <div class="relative w-full bg-zinc-950 rounded-t-[40px] p-8 border-t border-white/10 shadow-2xl">
             <div class="w-12 h-1 bg-zinc-800 rounded-full mx-auto mb-8"></div>
-            
             <h2 class="text-2xl font-bold mb-2 text-center">Пополнение TON</h2>
             <p class="text-zinc-500 text-[10px] text-center uppercase tracking-widest mb-8 font-bold">Выберите сумму депозита</p>
-
             <div id="ton-connect-trigger" class="hidden"></div>
-
             <div class="grid grid-cols-3 gap-3 mb-6">
-                <button onclick="setFastAmount(0.1)" class="py-4 rounded-2xl bg-zinc-900 border border-white/5 font-bold hover:border-blue-500 transition-all">0.1</button>
-                <button onclick="setFastAmount(0.5)" class="py-4 rounded-2xl bg-zinc-900 border border-white/5 font-bold hover:border-blue-500 transition-all text-blue-500">0.5</button>
-                <button onclick="setFastAmount(1.0)" class="py-4 rounded-2xl bg-zinc-900 border border-white/5 font-bold hover:border-blue-500 transition-all">1.0</button>
+                <button onclick="setFastAmount(0.1)" class="py-4 rounded-2xl bg-zinc-900 border border-white/5 font-bold hover:border-blue-500">0.1</button>
+                <button onclick="setFastAmount(0.5)" class="py-4 rounded-2xl bg-zinc-900 border border-white/5 font-bold hover:border-blue-500 text-blue-500">0.5</button>
+                <button onclick="setFastAmount(1.0)" class="py-4 rounded-2xl bg-zinc-900 border border-white/5 font-bold hover:border-blue-500">1.0</button>
             </div>
-
             <div class="relative mb-8">
-                <input type="number" id="deposit-input" placeholder="0.00" step="0.1" 
-                       class="w-full bg-zinc-900 border border-white/10 rounded-2xl py-4 px-6 text-xl font-bold outline-none focus:border-blue-500 transition-all">
+                <input type="number" id="deposit-input" placeholder="0.00" class="w-full bg-zinc-900 border border-white/10 rounded-2xl py-4 px-6 text-xl font-bold outline-none focus:border-blue-500">
                 <span class="absolute right-6 top-1/2 -translate-y-1/2 font-bold text-blue-500">TON</span>
             </div>
-
-            <button onclick="processTransaction()" class="ton-btn w-full py-5 rounded-[22px] font-black text-sm uppercase tracking-widest active:scale-95 transition-all">
+            <button onclick="processTransaction()" class="ton-btn w-full py-5 rounded-[22px] font-black text-sm uppercase tracking-widest active:scale-95">
                 Оплатить TON
             </button>
         </div>
@@ -118,11 +112,32 @@
     <script>
         const tg = window.Telegram.WebApp;
         const MY_ADDRESS = "UQBAshgLU8AMuBwOQjzbpE127NjtI8g9PfoVtGtVCy9SS_kg";
+        
+        // ВСТАВЬ СЮДА СВОЮ ССЫЛКУ ИЗ LOCAL TUNNEL ИЛИ NGROK
+        const SERVER_URL = "https://vadympersona.github.io/Vadymn/"; 
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://vadympersona.github.io/Vadymn/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-trigger'
         });
+
+        // ФУНКЦИЯ ПОЛУЧЕНИЯ БАЛАНСА ИЗ БАЗЫ БОТА
+        async function syncBalance() {
+            const user = tg.initDataUnsafe?.user;
+            if (!user || !SERVER_URL.startsWith("http")) return;
+
+            try {
+                const response = await fetch(`${SERVER_URL}/get_balance/${user.id}`, {
+                    headers: { "Bypass-Tunnel-Reminder": "true" }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('display-balance').innerText = data.balance.toFixed(6);
+                }
+            } catch (e) {
+                console.error("Ошибка связи с базой данных");
+            }
+        }
 
         function toggleModal(show) {
             const m = document.getElementById('deposit-modal');
@@ -139,11 +154,7 @@
         async function processTransaction() {
             const amount = document.getElementById('deposit-input').value || 0.1;
             const nanoAmount = (parseFloat(amount) * 1000000000).toString();
-
-            if (!tonConnectUI.connected) {
-                await tonConnectUI.openModal();
-                return;
-            }
+            if (!tonConnectUI.connected) { await tonConnectUI.openModal(); return; }
 
             const tx = {
                 validUntil: Math.floor(Date.now() / 1000) + 600,
@@ -159,14 +170,11 @@
                 tg.MainButton.setText("ПОДТВЕРДИТЕ В КОШЕЛЬКЕ").show();
                 await tonConnectUI.sendTransaction(tx);
                 tg.MainButton.setText("✅ УСПЕШНО").setParams({color: "#16a34a"});
-                tg.HapticFeedback.notificationOccurred('success');
                 setTimeout(() => tg.MainButton.hide(), 3000);
-            } catch (e) {
-                tg.MainButton.hide();
-                tg.HapticFeedback.notificationOccurred('error');
-            }
+            } catch (e) { tg.MainButton.hide(); }
         }
 
+        // Загрузка данных профиля
         const user = tg.initDataUnsafe?.user;
         if (user) {
             document.getElementById('user-name').innerText = user.first_name;
@@ -178,6 +186,11 @@
                 document.getElementById('avatar-loader').style.display = 'none';
             }
         }
+
+        // Обновляем баланс каждые 5 секунд
+        setInterval(syncBalance, 5000);
+        syncBalance();
+
         tg.expand();
     </script>
 </body>
