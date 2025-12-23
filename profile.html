@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #000; color: white; font-family: -apple-system, sans-serif; padding-bottom: 100px; }
+        body { background-color: #000; color: white; font-family: -apple-system, sans-serif; padding-bottom: 120px; }
         .card-grad { 
             background: linear-gradient(145deg, #1a1a1a 0%, #050505 100%); 
             border: 1px solid rgba(255,255,255,0.08); 
@@ -20,11 +20,28 @@
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
         #ton-connect-button button { background-color: #248bf2 !important; border-radius: 12px !important; width: 100% !important; }
-        .btn-donate {
-            background: linear-gradient(90deg, #248bf2, #0052cc);
-            transition: all 0.2s ease;
+        
+        /* Стили поля ввода */
+        .input-ton {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            outline: none;
+            transition: all 0.3s;
         }
-        .btn-donate:active { scale: 0.95; opacity: 0.8; }
+        .input-ton:focus { border-color: #248bf2; background: rgba(36, 139, 242, 0.05); }
+
+        .btn-preset {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
+        }
+        .btn-preset:active { scale: 0.9; background: #248bf2; border-color: #248bf2; }
+
+        .btn-send {
+            background: linear-gradient(90deg, #248bf2, #0052cc);
+            box-shadow: 0 4px 15px rgba(36, 139, 242, 0.3);
+        }
+        .btn-send:active { scale: 0.98; opacity: 0.9; }
     </style>
 </head>
 <body class="p-6">
@@ -39,20 +56,29 @@
     </div>
 
     <div class="card-grad p-6 mb-4">
-        <div class="flex justify-between items-start mb-8">
-            <div>
-                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Wallet Connection</p>
-                <div id="ton-connect-button"></div>
-            </div>
-            <div class="px-2 py-1 bg-zinc-800 rounded-lg text-[10px] text-zinc-400">TON</div>
+        <div class="mb-6">
+            <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-3">1. Connect Wallet</p>
+            <div id="ton-connect-button"></div>
         </div>
 
         <div id="donation-block" class="opacity-30 pointer-events-none transition-all duration-500">
-            <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-3">Support Token (Donation)</p>
-            <button onclick="sendDonation()" class="btn-donate w-full py-4 rounded-2xl font-bold text-sm shadow-lg shadow-blue-500/20">
-                Donate 0.001 TON
+            <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-3">2. Support Amount (min 0.1)</p>
+            
+            <div class="relative mb-4">
+                <input type="number" id="ton-amount" value="0.1" step="0.1" min="0.1"
+                       class="input-ton w-full py-4 px-5 rounded-2xl text-xl font-bold tracking-tight">
+                <span class="absolute right-5 top-1/2 -translate-y-1/2 text-blue-500 font-bold">TON</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mb-6">
+                <button onclick="setAmount(0.1)" class="btn-preset py-2 rounded-xl text-xs font-bold">0.1</button>
+                <button onclick="setAmount(0.5)" class="btn-preset py-2 rounded-xl text-xs font-bold">0.5</button>
+                <button onclick="setAmount(1.0)" class="btn-preset py-2 rounded-xl text-xs font-bold">1.0</button>
+            </div>
+
+            <button onclick="sendDonation()" class="btn-send w-full py-4 rounded-2xl font-bold text-sm">
+                Send Donation
             </button>
-            <p class="text-[9px] text-zinc-500 mt-2 text-center italic">Средства пойдут на ликвидность токена</p>
         </div>
     </div>
 
@@ -71,15 +97,18 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
-
-        // --- КОНФИГУРАЦИЯ ---
-        const MY_WALLET_ADDRESS = "UQBAshgLU8AMuBwOQjzbpE127NjtI8g9PfoVtGtVCy9SS_kg"; // Вставь свой адрес TON (начинается на UQ... или EQ...)
+        const MY_WALLET_ADDRESS = "UQBAshgLU8AMuBwOQjzbpE127NjtI8g9PfoVtGtVCy9SS_kg";
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://vadympersona.github.io/Vadymn/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-button'
         });
+
+        // Установка суммы быстрыми кнопками
+        function setAmount(val) {
+            document.getElementById('ton-amount').value = val;
+            tg.HapticFeedback.impactOccurred('light');
+        }
 
         // Данные профиля
         const user = tg.initDataUnsafe?.user;
@@ -94,7 +123,6 @@
             }
         }
 
-        // Логика разблокировки кнопки доната
         tonConnectUI.onStatusChange(wallet => {
             const donateBlock = document.getElementById('donation-block');
             if (wallet) {
@@ -104,31 +132,35 @@
             }
         });
 
-        // ФУНКЦИЯ ОТПРАВКИ ДЕНЕГ
         async function sendDonation() {
+            const amountInput = document.getElementById('ton-amount').value;
+            const amountInNano = parseFloat(amountInput) * 1000000000;
+
+            if (isNaN(amountInNano) || amountInput < 0.1) {
+                alert("Минимальная сумма 0.1 TON");
+                return;
+            }
+
             const transaction = {
-                validUntil: Math.floor(Date.now() / 1000) + 600, // 10 минут на подтверждение
-                messages: [
-                    {
-                        address: MY_WALLET_ADDRESS, // Твой адрес
-                        amount: "1000000", // 0.001 TON в нанотонах (1 TON = 1,000,000,000)
-                    }
-                ]
+                validUntil: Math.floor(Date.now() / 1000) + 600,
+                messages: [{
+                    address: MY_WALLET_ADDRESS,
+                    amount: amountInNano.toString(), 
+                }]
             };
 
             try {
                 const statusEl = document.getElementById('status-msg');
-                statusEl.innerText = "Ожидание подтверждения...";
+                statusEl.innerText = "Confirm in wallet...";
                 statusEl.className = "text-yellow-500 text-[10px] font-bold uppercase text-center";
 
-                const result = await tonConnectUI.sendTransaction(transaction);
+                await tonConnectUI.sendTransaction(transaction);
                 
-                statusEl.innerText = "✅ Спасибо за поддержку!";
+                statusEl.innerText = "✅ Success! Thank you.";
                 statusEl.className = "text-green-500 text-[10px] font-bold uppercase text-center";
                 tg.HapticFeedback.notificationOccurred('success');
             } catch (e) {
-                console.error(e);
-                document.getElementById('status-msg').innerText = "❌ Ошибка транзакции";
+                document.getElementById('status-msg').innerText = "❌ Cancelled";
                 document.getElementById('status-msg').className = "text-red-500 text-[10px] font-bold uppercase text-center";
                 tg.HapticFeedback.notificationOccurred('error');
             }
