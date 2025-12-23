@@ -20,13 +20,19 @@
         }
         .case-card:active { transform: scale(0.96); opacity: 0.8; }
         
-        /* Голубое свечение */
+        /* Стили блокировки */
+        .case-card.locked {
+            opacity: 0.6;
+            filter: grayscale(0.8);
+            pointer-events: none;
+            border-color: rgba(255, 255, 255, 0.02);
+        }
+        
         .glow-blue {
             box-shadow: 0 0 20px rgba(0, 122, 255, 0.1);
             border-color: rgba(0, 122, 255, 0.2);
         }
         
-        /* Красное свечение для Ежедневного */
         .glow-red {
             box-shadow: 0 0 25px rgba(255, 50, 50, 0.15);
             border-color: rgba(255, 50, 50, 0.3);
@@ -63,19 +69,17 @@
                 </div>
             </div>
             <img src="case.png" class="w-28 h-28 case-img blue-shadow relative z-10" onerror="this.src='https://giftsbattle.com/cases/Porsche_911'">
-            <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-blue-600/10 blur-3xl rounded-full"></div>
         </div>
 
-        <div onclick="openDaily()" class="case-card glow-red rounded-[35px] p-6 flex items-center justify-between relative overflow-hidden">
+        <div id="daily-card" onclick="openDaily()" class="case-card glow-red rounded-[35px] p-6 flex items-center justify-between relative overflow-hidden">
             <div class="z-10">
                 <h2 class="text-xl font-black italic uppercase leading-none mb-1 text-red-500">Ежедневный<br>Кейс</h2>
-                <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mb-4">Доступен без ограничений</p>
-                <div class="flex items-center gap-2 bg-red-500/20 w-fit px-3 py-1.5 rounded-full border border-red-500/20">
+                <p id="daily-status" class="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mb-4">Проверка...</p>
+                <div id="daily-badge" class="flex items-center gap-2 bg-red-500/20 w-fit px-3 py-1.5 rounded-full border border-red-500/20">
                     <span class="text-[10px] font-black text-red-500 uppercase">FREE</span>
                 </div>
             </div>
             <img src="free.png" class="w-28 h-28 case-img red-shadow relative z-10" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2854/2854580.png'">
-            <div class="absolute -right-4 -bottom-4 w-32 h-32 bg-red-600/10 blur-3xl rounded-full"></div>
         </div>
 
     </div>
@@ -97,16 +101,52 @@
 
     <script>
         const tg = window.Telegram.WebApp;
+        const COOLDOWN_TIME = 24 * 60 * 60 * 1000; // 24 часа
 
-        function openDaily() {
-            // Вибрация при нажатии
-            tg.HapticFeedback.impactOccurred('medium');
+        function updateDailyCooldown() {
+            const lastOpen = localStorage.getItem('last_daily_open');
+            const card = document.getElementById('daily-card');
+            const status = document.getElementById('daily-status');
+            const badge = document.getElementById('daily-badge');
+
+            if (lastOpen) {
+                const now = Date.now();
+                const timePassed = now - parseInt(lastOpen);
+
+                if (timePassed < COOLDOWN_TIME) {
+                    const timeLeft = COOLDOWN_TIME - timePassed;
+                    
+                    // Расчет часов и минут
+                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+                    card.classList.add('locked');
+                    status.innerText = `Доступно через ${hours}ч ${minutes}м`;
+                    status.classList.replace('text-zinc-400', 'text-zinc-500');
+                    return false;
+                }
+            }
             
-            // Переход на страницу открытия ежедневного кейса
-            window.location.href = 'free_case.html';
+            // Если КД прошло или еще не открывали
+            card.classList.remove('locked');
+            status.innerText = "Доступен сейчас!";
+            status.classList.replace('text-zinc-500', 'text-zinc-400');
+            return true;
         }
 
-        // Инициализация
+        function openDaily() {
+            if (updateDailyCooldown()) {
+                tg.HapticFeedback.impactOccurred('medium');
+                // Важно: время открытия фиксируется в файле free_case.html после нажатия кнопки "Открыть"
+                window.location.href = 'free_case.html';
+            }
+        }
+
+        // Запуск проверки
+        updateDailyCooldown();
+        // Обновляем текст каждую минуту
+        setInterval(updateDailyCooldown, 60000);
+
         tg.ready();
         tg.expand();
     </script>
