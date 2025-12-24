@@ -28,21 +28,21 @@
         .modal-hidden { transform: translateY(100%); opacity: 0; pointer-events: none; }
         .modal-show { transform: translateY(0); opacity: 1; pointer-events: auto; }
         
-        .ton-btn {
-            background: linear-gradient(90deg, #007aff, #005bb5);
-            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
-        }
         .rate-badge {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 16px;
         }
-        /* Анимация для истории */
+
+        /* Тонкий скролл для истории */
+        #history-container::-webkit-scrollbar { width: 3px; }
+        #history-container::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+
         .tx-item {
-            animation: fadeIn 0.5s ease-out forwards;
-            opacity: 0; transform: translateY(10px);
+            animation: fadeIn 0.4s ease-out forwards;
         }
         @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
@@ -75,10 +75,10 @@
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Network Identity</p>
-                <p class="text-base font-bold text-zinc-300">@mj_cryptogame_bot</p>
+                <p id="card-user-handle" class="text-base font-bold text-zinc-300">@user</p>
             </div>
             <div class="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/20">
-                <img src="https://ton.org/download/ton_symbol.svg" class="w-6 h-6 ton-logo" alt="TON">
+                <img src="https://ton.org/download/ton_symbol.svg" class="w-6 h-6" alt="TON">
             </div>
         </div>
         <div class="flex justify-between items-end">
@@ -87,26 +87,13 @@
         </div>
     </div>
 
-    <div class="flex flex-col gap-3 mb-8">
-        <p class="text-zinc-500 text-[9px] uppercase tracking-widest font-bold px-2">Market Rates</p>
-        
-        <div class="rate-badge p-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <img src="https://ton.org/download/ton_symbol.svg" class="w-5 h-5" alt="TON">
-                </div>
-                <span class="font-bold text-sm tracking-tight">TON / USD</span>
-            </div>
-            <span id="ton-price" class="font-mono font-bold text-zinc-300 tracking-tighter">$...</span>
-        </div>
-    </div>
-
     <div class="w-full mb-24">
         <div class="flex justify-between items-end mb-3 px-2">
-            <h3 class="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Live Activity</h3>
-            <span class="text-[9px] text-zinc-600 animate-pulse">● Live</span>
+            <h3 class="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Ваша активность</h3>
+            <span class="text-[9px] text-zinc-700 font-bold">PRIVATE</span>
         </div>
-        <div id="history-container" class="flex flex-col gap-2">
+        
+        <div id="history-container" class="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
             <div class="text-center py-4 text-zinc-600 text-xs">Загрузка операций...</div>
         </div>
     </div>
@@ -116,8 +103,7 @@
         <div class="relative w-full bg-zinc-950 rounded-t-[40px] p-8 border-t border-white/10 shadow-2xl">
             <div class="w-12 h-1 bg-zinc-800 rounded-full mx-auto mb-8"></div>
             <h2 class="text-2xl font-bold mb-2 text-center">Пополнение</h2>
-            <p class="text-zinc-500 text-[10px] text-center uppercase tracking-widest mb-8 font-bold">Выберите метод</p>
-            <div id="ton-connect-trigger" class="w-full flex justify-center mb-4"></div>
+            <div id="ton-connect-trigger" class="w-full flex justify-center mb-4 mt-6"></div>
             <button onclick="toggleModal(false)" class="w-full py-4 rounded-2xl bg-zinc-900 text-zinc-400 font-bold text-sm">Закрыть</button>
         </div>
     </div>
@@ -127,11 +113,11 @@
             <span class="text-2xl">🏠</span>
             <span class="text-[10px] font-bold uppercase tracking-widest">Главная</span>
         </div>
-        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
+        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40">
             <span class="text-2xl">📦</span>
             <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Кейсы</span>
         </a>
-        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
+        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40">
             <span class="text-2xl">👤</span>
             <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Профиль</span>
         </a>
@@ -139,12 +125,16 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        
-        // 1. ИНИЦИАЛИЗАЦИЯ ИНТЕРФЕЙСА
+        let lastJsonHash = "";
+
+        // 1. Инициализация пользователя
         const user = tg.initDataUnsafe?.user;
         if (user) {
             document.getElementById('user-name').innerText = user.first_name;
             document.getElementById('user-id-display').innerText = `ID: ${user.id}`;
+            // Установка юзернейма в карточку
+            document.getElementById('card-user-handle').innerText = user.username ? `@${user.username}` : user.first_name;
+            
             const avatar = document.getElementById('user-avatar');
             avatar.src = user.photo_url || `https://t.me/i/userpic/320/${user.username || 'default'}.jpg`;
             avatar.onload = () => {
@@ -158,107 +148,74 @@
             buttonRootId: 'ton-connect-trigger'
         });
 
-        // 2. ПОЛУЧЕНИЕ КУРСА TON
-        async function getTonPrice() {
-            try {
-                const response = await fetch('https://api.coinbase.com/v2/prices/TON-USD/spot');
-                const data = await response.json();
-                document.getElementById('ton-price').innerText = `$${parseFloat(data.data.amount).toFixed(2)}`;
-            } catch (e) { document.getElementById('ton-price').innerText = "$5.40"; }
-        }
-
-        // 3. ЗАГРУЗКА ИСТОРИИ ИЗ transactions.json
+        // 2. Приватная загрузка истории
         async function loadHistory() {
-            const container = document.getElementById('history-container');
-            
-            // Чтобы это работало, файл transactions.json должен лежать рядом с index.html
-            // Если вы тестируете локально, вам нужен локальный сервер, либо загрузите на GitHub Pages
             try {
                 const response = await fetch('transactions.json?nocache=' + Date.now());
-                if (!response.ok) throw new Error("Нет истории");
+                if (!response.ok) return;
                 
-                const history = await response.json();
-                container.innerHTML = ''; // Очистка
+                const textData = await response.text();
+                if (textData === lastJsonHash) return; // Не обновляем, если данные те же
+                lastJsonHash = textData;
 
-                if (history.length === 0) {
-                    container.innerHTML = '<div class="text-center text-zinc-600 text-xs py-4">Операций пока нет</div>';
-                    return;
-                }
+                const history = JSON.parse(textData);
+                const container = document.getElementById('history-container');
+                container.innerHTML = '';
 
-                history.forEach((tx, index) => {
-                    const isMe = user && (tx.to_user === `@${user.username}` || tx.to_user === user.username);
-                    
-                    // Оформление в зависимости от типа
-                    let icon = '💸';
-                    let title = 'Перевод';
-                    let colorClass = 'text-white';
-                    
-                    if (tx.type === 'admin_grant') {
-                        icon = '🎁';
-                        title = 'Подарок Админа';
-                        colorClass = 'text-green-400';
-                    } else if (tx.type === 'mining_win') {
-                        icon = '⛏';
-                        title = 'Майнинг';
-                        colorClass = 'text-yellow-400';
-                    }
+                const cleanMyUser = user?.username?.toLowerCase().replace('@','');
+                let myBalance = 0;
 
-                    const html = `
-                        <div class="tx-item rate-badge p-3 flex justify-between items-center" style="animation-delay: ${index * 0.1}s">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl">
-                                    ${icon}
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="font-bold text-xs ${isMe ? 'text-blue-400' : 'text-zinc-300'}">
-                                        ${isMe ? 'Вам начислено' : tx.to_user}
-                                    </span>
-                                    <span class="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">${title}</span>
-                                </div>
-                            </div>
-                            <div class="flex flex-col items-end">
-                                <span class="font-black text-sm ${colorClass}">+${tx.amount_mj} MJ</span>
-                                <span class="text-[9px] text-zinc-600 font-mono">≈ ${tx.amount_ton_eq} TON</span>
-                            </div>
-                        </div>
-                    `;
-                    container.innerHTML += html;
+                // Фильтруем только свои транзакции
+                const myHistory = history.filter(tx => {
+                    const txUser = tx.to_user.toLowerCase().replace('@','');
+                    return cleanMyUser && (txUser === cleanMyUser);
                 });
-                
-                // --- Подсчет баланса на лету (временное решение) ---
-                // Если файл json содержит все транзакции, мы можем посчитать баланс юзера
-                if (user && user.username) {
-                    let myBalance = 0;
-                    history.forEach(tx => {
-                        const cleanUser = user.username.toLowerCase().replace('@','');
-                        const txUser = tx.to_user.toLowerCase().replace('@','');
-                        if (txUser === cleanUser) {
-                            myBalance += parseFloat(tx.amount_mj);
-                        }
+
+                if (myHistory.length === 0) {
+                    container.innerHTML = '<div class="text-center text-zinc-800 text-xs py-10 uppercase tracking-widest">Операций нет</div>';
+                } else {
+                    myHistory.forEach((tx) => {
+                        myBalance += parseFloat(tx.amount_mj);
+
+                        let icon = '💸', title = 'Пополнение', color = 'text-white';
+                        if (tx.type === 'admin_grant') { icon = '🎁'; title = 'Подарок'; color = 'text-green-400'; }
+                        else if (tx.type === 'mining_win') { icon = '⛏'; title = 'Майнинг'; color = 'text-yellow-400'; }
+
+                        const html = `
+                            <div class="tx-item rate-badge p-3 flex justify-between items-center mb-1">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-xl">${icon}</div>
+                                    <div class="flex flex-col">
+                                        <span class="font-bold text-xs text-blue-400">Вы</span>
+                                        <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-tighter">${title}</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="font-black text-sm ${color}">+${tx.amount_mj} MJ</span>
+                                    <span class="text-[9px] text-zinc-600 font-mono italic">${tx.amount_ton_eq} TON</span>
+                                </div>
+                            </div>`;
+                        container.insertAdjacentHTML('beforeend', html);
                     });
-                    document.getElementById('display-balance').innerText = myBalance.toFixed(2);
-                    document.getElementById('ton-eq-balance').innerText = (myBalance * 0.0002).toFixed(4);
                 }
 
-            } catch (e) {
-                console.log(e);
-                container.innerHTML = '<div class="text-center text-zinc-600 text-xs py-4">Лента обновляется...</div>';
-            }
+                // Обновляем баланс только по личным транзакциям
+                document.getElementById('display-balance').innerText = myBalance.toFixed(2);
+                document.getElementById('ton-eq-balance').innerText = (myBalance * 0.0002).toFixed(4);
+
+            } catch (e) { console.error("History error:", e); }
         }
 
         function toggleModal(show) {
             const m = document.getElementById('deposit-modal');
             if (show) m.classList.replace('modal-hidden', 'modal-show');
             else m.classList.replace('modal-show', 'modal-hidden');
-            tg.HapticFeedback.impactOccurred('medium');
+            tg.HapticFeedback.impactOccurred('light');
         }
 
         // Запуск
-        getTonPrice();
         loadHistory();
-        
-        // Автообновление ленты каждые 5 секунд
-        setInterval(loadHistory, 5000);
+        setInterval(loadHistory, 4000); // Обновление раз в 4 секунды
         
         tg.expand();
     </script>
