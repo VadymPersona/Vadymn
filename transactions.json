@@ -1,9 +1,185 @@
 [
     {
         "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.1144,
+        "amount_ton_eq": 2.3e-05,
+        "time": "19:47:53",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "personovich",
+        "amount_mj": 0.0852,
+        "amount_ton_eq": 1.7e-05,
+        "time": "19:45:22",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.1214,
+        "amount_ton_eq": 2.4e-05,
+        "time": "19:41:37",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.0904,
+        "amount_ton_eq": 1.8e-05,
+        "time": "19:40:09",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "personovich",
+        "amount_mj": 0.0816,
+        "amount_ton_eq": 1.6e-05,
+        "time": "19:38:38",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.1082,
+        "amount_ton_eq": 2.2e-05,
+        "time": "19:37:08",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.1035,
+        "amount_ton_eq": 2.1e-05,
+        "time": "19:35:39",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.1198,
+        "amount_ton_eq": 2.4e-05,
+        "time": "19:34:09",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.1059,
+        "amount_ton_eq": 2.1e-05,
+        "time": "19:32:38",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.1,
+        "amount_ton_eq": 2e-05,
+        "time": "19:31:20",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.0833,
+        "amount_ton_eq": 1.7e-05,
+        "time": "19:29:39",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.1147,
+        "amount_ton_eq": 2.3e-05,
+        "time": "19:28:14",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.1283,
+        "amount_ton_eq": 2.6e-05,
+        "time": "19:26:41",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "cvc_vvc",
+        "amount_mj": 0.0895,
+        "amount_ton_eq": 1.8e-05,
+        "time": "19:25:12",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "Dranichek22",
+        "amount_mj": 0.1265,
+        "amount_ton_eq": 2.5e-05,
+        "time": "19:25:01",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "personovich",
+        "amount_mj": 0.0898,
+        "amount_ton_eq": 1.8e-05,
+        "time": "19:22:15",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "tgrro",
+        "amount_mj": 0.1165,
+        "amount_ton_eq": 2.3e-05,
+        "time": "19:19:25",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "personovich",
+        "amount_mj": 0.1287,
+        "amount_ton_eq": 2.6e-05,
+        "time": "19:17:52",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "Dranichek22",
+        "amount_mj": 0.1257,
+        "amount_ton_eq": 2.5e-05,
+        "time": "19:14:53",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "personovich",
+        "amount_mj": 0.127,
+        "amount_ton_eq": 2.5e-05,
+        "time": "19:13:17",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "personovich",
+        "amount_mj": 0.0995,
+        "amount_ton_eq": 2e-05,
+        "time": "19:11:57",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
+        "to_user": "personovich",
+        "amount_mj": 0.1123,
+        "amount_ton_eq": 2.2e-05,
+        "time": "19:10:21",
+        "date": "2025-12-24"
+    },
+    {
+        "type": "mining_win",
         "to_user": "personovich",
         "amount_mj": 0.0812,
-        "amount_ton_eq": 0.00001,
+        "amount_ton_eq": 1e-05,
         "time": "12:06:21",
         "date": "2025-12-24"
     },
