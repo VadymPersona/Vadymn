@@ -1,0 +1,10 @@
+[
+    {
+        "type": "admin_grant",
+        "to_user": "@personovich",
+        "amount_mj": 100002.0,
+        "amount_ton_eq": 20.0004,
+        "time": "11:56:03",
+        "date": "2025-12-24"
+    }
+]
