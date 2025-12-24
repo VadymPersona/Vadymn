@@ -1,5 +1,13 @@
 [
     {
+        "type": "mining_win",
+        "to_user": "personovich",
+        "amount_mj": 0.0812,
+        "amount_ton_eq": 0.00001,
+        "time": "12:06:21",
+        "date": "2025-12-24"
+    },
+    {
         "type": "admin_grant",
         "to_user": "@personovich",
         "amount_mj": 100002.0,
