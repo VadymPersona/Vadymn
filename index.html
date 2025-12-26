@@ -34,7 +34,6 @@
             border-radius: 16px;
         }
 
-        /* Тонкий скролл для истории */
         #history-container::-webkit-scrollbar { width: 3px; }
         #history-container::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
 
@@ -59,11 +58,19 @@
 
     <div class="flex flex-col items-center mb-10">
         <p class="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">Баланс кошелька</p>
-        <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 mr-2">
                 <span class="text-4xl font-black italic tracking-tighter" id="display-balance">0.00</span>
                 <span class="text-2xl font-bold text-blue-500 uppercase">MJ</span>
             </div>
+            
+            <a href="transfer.html" class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-blue-600/30">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 2L11 13" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </a>
+
             <button onclick="toggleModal(true)" class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center active:scale-90 transition-transform shadow-lg shadow-blue-600/30">
                 <span class="text-3xl font-bold text-white">+</span>
             </button>
@@ -127,12 +134,10 @@
         const tg = window.Telegram.WebApp;
         let lastJsonHash = "";
 
-        // 1. Инициализация пользователя
         const user = tg.initDataUnsafe?.user;
         if (user) {
             document.getElementById('user-name').innerText = user.first_name;
             document.getElementById('user-id-display').innerText = `ID: ${user.id}`;
-            // Установка юзернейма в карточку
             document.getElementById('card-user-handle').innerText = user.username ? `@${user.username}` : user.first_name;
             
             const avatar = document.getElementById('user-avatar');
@@ -148,14 +153,13 @@
             buttonRootId: 'ton-connect-trigger'
         });
 
-        // 2. Приватная загрузка истории
         async function loadHistory() {
             try {
                 const response = await fetch('transactions.json?nocache=' + Date.now());
                 if (!response.ok) return;
                 
                 const textData = await response.text();
-                if (textData === lastJsonHash) return; // Не обновляем, если данные те же
+                if (textData === lastJsonHash) return; 
                 lastJsonHash = textData;
 
                 const history = JSON.parse(textData);
@@ -165,7 +169,6 @@
                 const cleanMyUser = user?.username?.toLowerCase().replace('@','');
                 let myBalance = 0;
 
-                // Фильтруем только свои транзакции
                 const myHistory = history.filter(tx => {
                     const txUser = tx.to_user.toLowerCase().replace('@','');
                     return cleanMyUser && (txUser === cleanMyUser);
@@ -174,24 +177,32 @@
                 if (myHistory.length === 0) {
                     container.innerHTML = '<div class="text-center text-zinc-800 text-xs py-10 uppercase tracking-widest">Операций нет</div>';
                 } else {
-                    myHistory.forEach((tx) => {
-                        myBalance += parseFloat(tx.amount_mj);
+                    // Рендерим в обратном порядке (новые сверху)
+                    [...myHistory].reverse().forEach((tx) => {
+                        const amt = parseFloat(tx.amount_mj);
+                        myBalance += amt;
 
                         let icon = '💸', title = 'Пополнение', color = 'text-white';
+                        
+                        // Обработка типов транзакций
                         if (tx.type === 'admin_grant') { icon = '🎁'; title = 'Подарок'; color = 'text-green-400'; }
                         else if (tx.type === 'mining_win') { icon = '⛏'; title = 'Майнинг'; color = 'text-yellow-400'; }
+                        else if (tx.type === 'transfer_out') { icon = '📤'; title = 'Перевод'; color = 'text-red-500'; }
+                        else if (tx.type === 'transfer_in') { icon = '📥'; title = 'Получено'; color = 'text-blue-400'; }
+
+                        const prefix = amt > 0 ? '+' : '';
 
                         const html = `
                             <div class="tx-item rate-badge p-3 flex justify-between items-center mb-1">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-xl">${icon}</div>
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-xs text-blue-400">Вы</span>
-                                        <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-tighter">${title}</span>
+                                        <span class="font-bold text-xs text-zinc-200">${tx.description || title}</span>
+                                        <span class="text-[9px] text-zinc-500 uppercase font-bold tracking-tighter">${tx.date || 'MJ NETWORK'}</span>
                                     </div>
                                 </div>
                                 <div class="flex flex-col items-end">
-                                    <span class="font-black text-sm ${color}">+${tx.amount_mj} MJ</span>
+                                    <span class="font-black text-sm ${color}">${prefix}${tx.amount_mj} MJ</span>
                                     <span class="text-[9px] text-zinc-600 font-mono italic">${tx.amount_ton_eq} TON</span>
                                 </div>
                             </div>`;
@@ -199,7 +210,6 @@
                     });
                 }
 
-                // Обновляем баланс только по личным транзакциям
                 document.getElementById('display-balance').innerText = myBalance.toFixed(2);
                 document.getElementById('ton-eq-balance').innerText = (myBalance * 0.0002).toFixed(4);
 
@@ -213,10 +223,8 @@
             tg.HapticFeedback.impactOccurred('light');
         }
 
-        // Запуск
         loadHistory();
-        setInterval(loadHistory, 4000); // Обновление раз в 4 секунды
-        
+        setInterval(loadHistory, 4000); 
         tg.expand();
     </script>
 </body>
