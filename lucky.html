@@ -22,6 +22,8 @@
         .participant-name { background: rgba(0, 0, 0, 0.7); padding: 1px 4px; border-radius: 4px; font-size: 7px; font-weight: 900; color: #fff; margin-top: 2px; white-space: nowrap; max-width: 55px; overflow: hidden; }
         .join-btn-main { background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4); }
         #winner-card { box-shadow: 0 0 50px rgba(59, 130, 246, 0.3); }
+        .new-year-text { color: #3b82f6; animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     </style>
 </head>
 <body class="p-6">
@@ -52,10 +54,10 @@
         <div id="participant-count" class="text-zinc-600 text-[10px] font-bold uppercase mt-5 tracking-[0.2em]">Участников: 0</div>
     </div>
 
-    <div id="winner-card" class="hidden text-center p-6 bg-zinc-900/95 border-2 border-blue-500 rounded-[35px] scale-105 animate-pulse mx-4">
+    <div id="winner-card" class="hidden text-center p-6 bg-zinc-900/95 border-2 border-blue-500 rounded-[35px] scale-105 mx-4">
         <p class="text-blue-400 text-[10px] font-black uppercase mb-3">🏆 Победитель найден</p>
         <div class="flex items-center justify-center gap-4">
-            <img id="winner-img" src="" class="w-16 h-16 rounded-full border-4 border-blue-500">
+            <img id="winner-img" src="" class="w-16 h-16 rounded-full border-4 border-blue-500 shadow-2xl">
             <div id="winner-user" class="text-2xl font-black italic text-white">@personovich</div>
         </div>
     </div>
@@ -79,6 +81,19 @@
         
         let participants = [];
         let spinning = false;
+        let serverTimeOffset = 0;
+        let isTimeSynced = false;
+
+        // Синхронизация с временем серверов Google/Firebase
+        const offsetRef = db.ref(".info/serverTimeOffset");
+        offsetRef.on("value", (snap) => {
+            serverTimeOffset = snap.val() || 0;
+            isTimeSynced = true;
+        });
+
+        function getCurrentServerTime() {
+            return Date.now() + serverTimeOffset;
+        }
 
         function stringToColor(str) {
             let hash = 0;
@@ -129,6 +144,13 @@
         }
 
         function handleSpin() {
+            // ФИНАЛЬНАЯ ЗАЩИТА: Не крутить, если серверное время еще не пришло (даже если таймер 0)
+            const targetTime = new Date("2026-01-01T00:00:00+03:00").getTime();
+            if (!isTimeSynced || getCurrentServerTime() < targetTime) {
+                console.log("Запуск отклонен: Серверное время еще не наступило.");
+                return;
+            }
+
             if (spinning || participants.length === 0) return;
             spinning = true;
             const wheel = document.getElementById('wheel-container');
@@ -136,30 +158,34 @@
             let winnerIdx = participants.findIndex(p => p.name.toLowerCase() === winnerTarget.toLowerCase());
             if (winnerIdx === -1) winnerIdx = 0;
             const sliceDeg = 360 / participants.length;
-            const rotation = 2160 + (360 - (winnerIdx * sliceDeg)) - 90 - (sliceDeg / 2);
+            const rotation = 3600 + (360 - (winnerIdx * sliceDeg)) - 90 - (sliceDeg / 2);
             wheel.style.transform = `rotate(${rotation}deg)`;
             setTimeout(() => {
                 document.getElementById('join-btn').classList.add('hidden');
                 document.getElementById('winner-card').classList.remove('hidden');
+                document.getElementById('winner-card').classList.add('animate-pulse');
                 document.getElementById('winner-img').src = `https://t.me/i/userpic/320/${winnerTarget}.jpg`;
                 tg.HapticFeedback.notificationOccurred('success');
             }, 6500);
         }
 
         function startTimer() {
-            // ФИКСИРОВАННОЕ ВРЕМЯ ПО МСК (UTC+3)
             const target = new Date("2026-01-01T00:00:00+03:00").getTime();
             
             const timerInt = setInterval(() => {
-                const now = Date.now();
+                const now = getCurrentServerTime();
                 const diff = target - now;
                 
                 if (diff <= 0) {
-                    clearInterval(timerInt);
-                    document.getElementById('timer-label').innerText = "ИТОГИ РОЗЫГРЫША:";
-                    document.getElementById('countdown').innerText = "С НОВЫМ ГОДОМ!!!";
-                    document.getElementById('countdown').classList.add('text-blue-500', 'animate-bounce');
-                    handleSpin();
+                    // Проверяем синхронизацию перед финишем
+                    if(isTimeSynced) {
+                        clearInterval(timerInt);
+                        document.getElementById('timer-label').innerText = "ИТОГИ РОЗЫГРЫША:";
+                        const countDisplay = document.getElementById('countdown');
+                        countDisplay.innerText = "С НОВЫМ ГОДОМ!!!";
+                        countDisplay.classList.add('new-year-text');
+                        handleSpin();
+                    }
                     return;
                 }
                 
