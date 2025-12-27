@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>MJ Roulette</title>
+    <title>MJ Lucky Draw</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { 
             background-color: #000; color: white; 
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: -apple-system, sans-serif;
             overflow-x: hidden; padding-bottom: 110px;
         }
         .nav-blur {
@@ -17,270 +17,327 @@
             backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .roulette-container {
+
+        /* Контейнер рулетки */
+        .roulette-wrapper {
             position: relative;
-            width: 300px;
-            height: 300px;
+            width: 340px;
+            height: 340px;
             margin: 0 auto;
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            /* background: radial-gradient(circle at center, rgba(30, 30, 30, 0.8) 0%, rgba(10, 10, 10, 0.8) 100%); */
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.05);
         }
-        .prize-image {
-            width: 120px;
-            height: 120px;
+
+        #canvas-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid #3b82f6;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-            z-index: 10;
+            z-index: 1;
         }
+
+        .prize-center {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            z-index: 20;
+            border: 5px solid #000;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+            background: #000;
+            overflow: hidden;
+        }
+
         .participant-item {
             position: absolute;
-            transform-origin: 150px; /* Центр контейнера */
+            z-index: 10;
+            display: flex;
+            flex-col: column;
+            align-items: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        .avatar-wrap {
+            position: relative;
+            width: 48px;
+            height: 48px;
+            padding: 2px;
+            background: linear-gradient(135deg, #3b82f6, #9333ea, #2563eb);
+            border-radius: 50%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+        }
+
         .participant-avatar {
-            width: 40px;
-            height: 40px;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: #111;
+            border: 2px solid #000;
         }
+
         .participant-name {
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap;
-            font-size: 0.7rem;
-            color: #ccc;
-            opacity: 0.8;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            padding: 2px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 9px;
+            font-weight: 800;
+            color: #fff;
             margin-top: 4px;
+            white-space: nowrap;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+
         .join-button {
             background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
-            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
-            transition: all 0.2s ease;
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s ease;
         }
-        .join-button:disabled {
-            background: #1a1a1a;
-            color: #444;
-            box-shadow: none;
-            cursor: not-allowed;
+        
+        .join-button:active { transform: scale(0.95); }
+        .join-button:disabled { background: #1a1a1a; color: #444; box-shadow: none; }
+
+        @keyframes popIn {
+            0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0); opacity: 1; }
         }
-        .winner-animation {
-            animation: pulse-winner 1.5s infinite alternate;
+        .pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes shimmer { 
+            0% { transform: translateX(-150%) skewX(-12deg); } 
+            100% { transform: translateX(250%) skewX(-12deg); } 
         }
-        @keyframes pulse-winner {
-            from { transform: scale(1); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-            to { transform: scale(1.05); box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        .shimmer-effect {
+            position: relative; overflow: hidden;
+        }
+        .shimmer-effect::after {
+            content: ''; position: absolute; top: 0; height: 100%; width: 50%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+            transform: skewX(-12deg); animation: shimmer 3s infinite;
         }
     </style>
 </head>
 <body class="p-6">
 
-    <div class="flex items-center gap-4 mb-8">
+    <div class="flex items-center gap-4 mb-6">
         <button onclick="history.back()" class="w-10 h-10 flex items-center justify-center bg-zinc-900 rounded-full active:scale-90 transition-transform">
             <span class="text-xl">←</span>
         </button>
-        <h1 class="text-xl font-bold tracking-tight text-blue-500">MJ Рулетка</h1>
+        <div>
+            <h1 class="text-xl font-bold text-blue-500">Lucky Draw</h1>
+            <p class="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Collector's Edition</p>
+        </div>
     </div>
 
-    <div class="text-center mb-8">
-        <p class="text-zinc-400 text-sm mb-2">Розыгрыш завершится через:</p>
-        <div id="countdown" class="text-3xl font-black italic text-white">00д 00ч 00м 00с</div>
+    <div class="text-center mb-10">
+        <p class="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">До финала осталось:</p>
+        <div id="countdown" class="text-3xl font-black italic text-white tracking-tighter">00:00:00</div>
     </div>
 
-    <div class="roulette-container mb-8">
-        <img id="prize-nft" src="https://nft.fragment.com/gift/vintagecigar-7301.large.jpg" class="prize-image" alt="NFT Prize">
-        <div id="participants-circle"></div>
+    <div class="roulette-wrapper mb-12">
+        <canvas id="canvas-bg"></canvas>
+        
+        <div class="prize-center">
+            <img src="https://nft.fragment.com/gift/vintagecigar-7301.large.jpg" class="w-full h-full object-cover">
+        </div>
+
+        <div id="participants-container" class="absolute inset-0 z-10"></div>
     </div>
 
-    <div class="text-center mb-6">
-        <button id="join-roulette-btn" class="join-button w-full py-4 rounded-xl font-black uppercase text-sm">
-            Участвовать!
+    <div class="text-center mb-8 px-4">
+        <button id="join-btn" onclick="joinEvent()" class="join-button shimmer-effect w-full py-5 rounded-[22px] font-black uppercase text-sm tracking-widest">
+            Участвовать в розыгрыше
         </button>
-        <p id="participant-count" class="text-zinc-500 text-xs mt-3">Участников: 0</p>
+        <div id="participant-count" class="text-zinc-600 text-[10px] font-bold uppercase mt-5 tracking-[0.2em]">Участников: 0</div>
     </div>
 
-    <div id="winner-display" class="hidden text-center p-4 bg-zinc-900/50 border border-blue-500/30 rounded-2xl">
-        <p class="text-zinc-400 text-sm mb-2">ПОБЕДИТЕЛЬ!</p>
-        <div class="flex items-center justify-center gap-3">
-            <img id="winner-avatar" src="" class="w-12 h-12 rounded-full border-2 border-blue-500 winner-animation" alt="Winner Avatar">
-            <span id="winner-name" class="text-xl font-black italic text-blue-400">@personovich</span>
+    <div id="winner-card" class="hidden text-center p-6 bg-zinc-900/80 border-2 border-blue-500/50 rounded-[35px] backdrop-blur-xl scale-110">
+        <p class="text-blue-400 text-[10px] font-black uppercase mb-4 tracking-widest">🏆 Победитель определен</p>
+        <div class="flex items-center justify-center gap-4">
+            <img id="winner-img" src="" class="w-16 h-16 rounded-full border-4 border-blue-500 shadow-2xl shadow-blue-500/40">
+            <div class="text-left">
+                <div id="winner-user" class="text-2xl font-black italic text-white">@personovich</div>
+                <div class="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">Vintage Cigar NFT</div>
+            </div>
         </div>
     </div>
 
     <div class="fixed bottom-0 left-0 right-0 h-20 nav-blur flex justify-around items-center px-8 z-50">
-        <a href="index.html" class="flex flex-col items-center gap-1 opacity-40">
-            <span class="text-2xl">🏠</span>
-            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Главная</span>
-        </a>
-        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40">
-            <span class="text-2xl">📦</span>
-            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Кейсы</span>
-        </a>
-        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40">
-            <span class="text-2xl">👤</span>
-            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Профиль</span>
-        </a>
+        <a href="index.html" class="flex flex-col items-center gap-1 opacity-40"><span class="text-2xl">🏠</span></a>
+        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40"><span class="text-2xl">📦</span></a>
+        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40"><span class="text-2xl">👤</span></a>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         const user = tg.initDataUnsafe?.user;
-        const prizeImageUrl = "https://nft.fragment.com/gift/vintagecigar-7301.large.jpg";
-        const winnerUsername = "personovich"; // Ваш гарантированный победитель
-        const raffleDurationMs = 3 * 24 * 60 * 60 * 1000; // 3 дня в миллисекундах
-        let raffleEndTime;
+        const winnerTag = "personovich";
+        
+        const colors = ['#1e3a8a', '#1d4ed8', '#3b82f6', '#60a5fa', '#1e40af', '#2563eb'];
+        let participants = JSON.parse(localStorage.getItem('roulette_users')) || [];
 
-        // Эмуляция хранения участников в локальном хранилище
-        let participants = JSON.parse(localStorage.getItem('roulette_participants')) || [];
+        function drawSectors() {
+            const canvas = document.getElementById('canvas-bg');
+            const ctx = canvas.getContext('2d');
+            const size = 340;
+            canvas.width = size;
+            canvas.height = size;
+            
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2 - 5;
 
-        // 1. Инициализация таймера
-        function initRaffleTimer() {
-            let storedStartTime = localStorage.getItem('roulette_start_time');
-            if (!storedStartTime) {
-                storedStartTime = Date.now();
-                localStorage.setItem('roulette_start_time', storedStartTime);
+            ctx.clearRect(0, 0, size, size);
+
+            if (participants.length === 0) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                return;
             }
-            raffleEndTime = parseInt(storedStartTime) + raffleDurationMs;
 
-            updateCountdown();
-            const timerInterval = setInterval(updateCountdown, 1000);
-        }
+            const slice = (Math.PI * 2) / participants.length;
 
-        function updateCountdown() {
-            const now = Date.now();
-            const timeLeft = raffleEndTime - now;
+            participants.forEach((p, i) => {
+                const startAngle = i * slice;
+                const endAngle = startAngle + slice;
 
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                document.getElementById('countdown').innerText = "ЗАВЕРШЕНО!";
-                showWinner();
-            } else {
-                const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
                 
-                document.getElementById('countdown').innerText = 
-                    `${String(days).padStart(2, '0')}д ${String(hours).padStart(2, '0')}ч ${String(minutes).padStart(2, '0')}м ${String(seconds).padStart(2, '0')}с`;
-            }
-            updateJoinButtonState();
-        }
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.globalAlpha = 0.3;
+                ctx.fill();
 
-        // 2. Отображение участников
-        function renderParticipants() {
-            const participantsCircle = document.getElementById('participants-circle');
-            participantsCircle.innerHTML = '';
-            document.getElementById('participant-count').innerText = `Участников: ${participants.length}`;
-
-            const radius = 120; // Радиус, на котором располагаются аватарки
-            const totalParticipants = participants.length;
-
-            participants.forEach((p, index) => {
-                const angle = (index / totalParticipants) * 2 * Math.PI;
-                const x = radius * Math.cos(angle);
-                const y = radius * Math.sin(angle);
-
-                const participantDiv = document.createElement('div');
-                participantDiv.className = 'participant-item absolute flex flex-col items-center';
-                participantDiv.style.left = `calc(50% + ${x}px - 20px)`; /* 20px = половина ширины аватарки */
-                participantDiv.style.top = `calc(50% + ${y}px - 20px)`;  /* 20px = половина высоты аватарки */
-                participantDiv.style.transform = `rotate(${angle * 180 / Math.PI + 90}deg)`; /* Поворачиваем аватарку к центру */
-
-                const avatarImg = document.createElement('img');
-                avatarImg.className = 'participant-avatar';
-                avatarImg.src = p.avatar_url || `https://t.me/i/userpic/320/${p.username || 'default'}.jpg`;
-                avatarImg.alt = p.username;
-
-                const nameSpan = document.createElement('span');
-                nameSpan.className = 'participant-name';
-                nameSpan.innerText = `@${p.username}`;
-                nameSpan.style.transform = `rotate(-${angle * 180 / Math.PI + 90}deg)`; // Возвращаем текст в горизонтальное положение
-
-                participantDiv.appendChild(avatarImg);
-                participantDiv.appendChild(nameSpan);
-                participantsCircle.appendChild(participantDiv);
+                // Линии разметки
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(centerX + Math.cos(startAngle) * radius, centerY + Math.sin(startAngle) * radius);
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
             });
         }
 
-        // 3. Логика кнопки "Участвовать"
-        const joinButton = document.getElementById('join-roulette-btn');
-        joinButton.addEventListener('click', () => {
+        function renderAvatars() {
+            const container = document.getElementById('participants-container');
+            container.innerHTML = '';
+            
+            const radius = 125; 
+            const centerX = 170;
+            const centerY = 170;
+            const total = participants.length;
+
+            participants.forEach((p, i) => {
+                const angle = (i / total) * Math.PI * 2;
+                const x = centerX + radius * Math.cos(angle) - 24; // 24 = половина ширины аватарки
+                const y = centerY + radius * Math.sin(angle) - 24;
+
+                const div = document.createElement('div');
+                div.className = 'participant-item pop-in flex flex-col items-center';
+                div.style.left = `${x}px`;
+                div.style.top = `${y}px`;
+
+                const avatarUrl = p.photo || `https://t.me/i/userpic/320/${p.name}.jpg`;
+
+                div.innerHTML = `
+                    <div class="avatar-wrap">
+                        <img src="${avatarUrl}" class="participant-avatar">
+                    </div>
+                    <div class="participant-name">@${p.name}</div>
+                `;
+                container.appendChild(div);
+            });
+            
+            document.getElementById('participant-count').innerText = `Участников: ${participants.length}`;
+            drawSectors();
+            updateButtonState();
+        }
+
+        function joinEvent() {
             if (!user) {
-                tg.showAlert("Вы не авторизованы. Пожалуйста, откройте бота через Telegram.");
+                tg.showAlert("Пожалуйста, запустите приложение из Telegram");
                 return;
             }
-            const myUsername = user.username.toLowerCase();
-            const alreadyJoined = participants.some(p => p.username.toLowerCase() === myUsername);
+
+            const name = user.username || user.first_name;
+            const alreadyJoined = participants.some(p => p.name === name);
 
             if (alreadyJoined) {
-                tg.showAlert("Вы уже участвуете в этом розыгрыше!");
-            } else {
-                participants.push({
-                    username: user.username,
-                    first_name: user.first_name,
-                    avatar_url: user.photo_url
-                });
-                localStorage.setItem('roulette_participants', JSON.stringify(participants));
-                renderParticipants();
-                tg.HapticFeedback.notificationOccurred('success');
-                tg.showNotification({
-                    type: 'success',
-                    message: "Вы успешно присоединились!"
-                });
-                updateJoinButtonState();
-            }
-        });
-
-        function updateJoinButtonState() {
-            if (!user) {
-                joinButton.disabled = true;
-                joinButton.innerText = "Авторизуйтесь в Telegram";
+                tg.showNotification({ message: "Вы уже в списке!" });
                 return;
             }
 
-            const now = Date.now();
-            if (now >= raffleEndTime) {
-                joinButton.disabled = true;
-                joinButton.innerText = "Розыгрыш завершен";
-                return;
-            }
+            participants.push({
+                name: name,
+                photo: user.photo_url
+            });
 
-            const myUsername = user.username.toLowerCase();
-            const alreadyJoined = participants.some(p => p.username.toLowerCase() === myUsername);
+            localStorage.setItem('roulette_users', JSON.stringify(participants));
+            tg.HapticFeedback.notificationOccurred('success');
+            renderAvatars();
+        }
 
-            if (alreadyJoined) {
-                joinButton.disabled = true;
-                joinButton.innerText = "Вы участвуете";
-            } else {
-                joinButton.disabled = false;
-                joinButton.innerText = "Участвовать!";
+        function updateButtonState() {
+            if (!user) return;
+            const btn = document.getElementById('join-btn');
+            const name = user.username || user.first_name;
+            if (participants.some(p => p.name === name)) {
+                btn.innerText = "Вы участвуете ✅";
+                btn.disabled = true;
+                btn.style.opacity = "0.6";
             }
         }
 
-        // 4. Показать победителя
+        function initTimer() {
+            let start = localStorage.getItem('r_start');
+            if (!start) { start = Date.now(); localStorage.setItem('r_start', start); }
+            
+            const end = parseInt(start) + (3 * 24 * 60 * 60 * 1000);
+            
+            const tick = () => {
+                const now = Date.now();
+                const diff = end - now;
+
+                if (diff <= 0) {
+                    document.getElementById('countdown').innerText = "ИТОГИ ПОДВЕДЕНЫ";
+                    showWinner();
+                    return;
+                }
+
+                const d = Math.floor(diff / 86400000);
+                const h = Math.floor((diff % 86400000) / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                
+                document.getElementById('countdown').innerText = 
+                    `${d}д ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                
+                requestAnimationFrame(() => setTimeout(tick, 1000));
+            };
+            tick();
+        }
+
         function showWinner() {
-            document.getElementById('join-roulette-btn').classList.add('hidden');
-            document.getElementById('participant-count').classList.add('hidden');
-            document.getElementById('countdown').classList.add('hidden');
-
-            const winnerDisplay = document.getElementById('winner-display');
-            winnerDisplay.classList.remove('hidden');
-
-            const winnerAvatarUrl = `https://t.me/i/userpic/320/${winnerUsername}.jpg`;
-            document.getElementById('winner-avatar').src = winnerAvatarUrl;
-            document.getElementById('winner-name').innerText = `@${winnerUsername}`;
+            document.getElementById('join-btn').style.display = 'none';
+            document.getElementById('participant-count').style.display = 'none';
+            const card = document.getElementById('winner-card');
+            card.classList.remove('hidden');
+            document.getElementById('winner-img').src = `https://t.me/i/userpic/320/${winnerTag}.jpg`;
         }
 
         // Запуск
-        initRaffleTimer();
-        renderParticipants();
+        renderAvatars();
+        initTimer();
         tg.expand();
     </script>
 </body>
