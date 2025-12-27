@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MJ Roulette</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background-color: #000; color: white; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow-x: hidden; padding-bottom: 110px;
+        }
+        .nav-blur {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .roulette-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* background: radial-gradient(circle at center, rgba(30, 30, 30, 0.8) 0%, rgba(10, 10, 10, 0.8) 100%); */
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.05);
+        }
+        .prize-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            z-index: 10;
+        }
+        .participant-item {
+            position: absolute;
+            transform-origin: 150px; /* Центр контейнера */
+        }
+        .participant-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        .participant-name {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 0.7rem;
+            color: #ccc;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+        .join-button {
+            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+            transition: all 0.2s ease;
+        }
+        .join-button:disabled {
+            background: #1a1a1a;
+            color: #444;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        .winner-animation {
+            animation: pulse-winner 1.5s infinite alternate;
+        }
+        @keyframes pulse-winner {
+            from { transform: scale(1); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+            to { transform: scale(1.05); box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="flex items-center gap-4 mb-8">
+        <button onclick="history.back()" class="w-10 h-10 flex items-center justify-center bg-zinc-900 rounded-full active:scale-90 transition-transform">
+            <span class="text-xl">←</span>
+        </button>
+        <h1 class="text-xl font-bold tracking-tight text-blue-500">MJ Рулетка</h1>
+    </div>
+
+    <div class="text-center mb-8">
+        <p class="text-zinc-400 text-sm mb-2">Розыгрыш завершится через:</p>
+        <div id="countdown" class="text-3xl font-black italic text-white">00д 00ч 00м 00с</div>
+    </div>
+
+    <div class="roulette-container mb-8">
+        <img id="prize-nft" src="https://nft.fragment.com/gift/vintagecigar-7301.large.jpg" class="prize-image" alt="NFT Prize">
+        <div id="participants-circle"></div>
+    </div>
+
+    <div class="text-center mb-6">
+        <button id="join-roulette-btn" class="join-button w-full py-4 rounded-xl font-black uppercase text-sm">
+            Участвовать!
+        </button>
+        <p id="participant-count" class="text-zinc-500 text-xs mt-3">Участников: 0</p>
+    </div>
+
+    <div id="winner-display" class="hidden text-center p-4 bg-zinc-900/50 border border-blue-500/30 rounded-2xl">
+        <p class="text-zinc-400 text-sm mb-2">ПОБЕДИТЕЛЬ!</p>
+        <div class="flex items-center justify-center gap-3">
+            <img id="winner-avatar" src="" class="w-12 h-12 rounded-full border-2 border-blue-500 winner-animation" alt="Winner Avatar">
+            <span id="winner-name" class="text-xl font-black italic text-blue-400">@personovich</span>
+        </div>
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 h-20 nav-blur flex justify-around items-center px-8 z-50">
+        <a href="index.html" class="flex flex-col items-center gap-1 opacity-40">
+            <span class="text-2xl">🏠</span>
+            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Главная</span>
+        </a>
+        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40">
+            <span class="text-2xl">📦</span>
+            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Кейсы</span>
+        </a>
+        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40">
+            <span class="text-2xl">👤</span>
+            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Профиль</span>
+        </a>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        const user = tg.initDataUnsafe?.user;
+        const prizeImageUrl = "https://nft.fragment.com/gift/vintagecigar-7301.large.jpg";
+        const winnerUsername = "personovich"; // Ваш гарантированный победитель
+        const raffleDurationMs = 3 * 24 * 60 * 60 * 1000; // 3 дня в миллисекундах
+        let raffleEndTime;
+
+        // Эмуляция хранения участников в локальном хранилище
+        let participants = JSON.parse(localStorage.getItem('roulette_participants')) || [];
+
+        // 1. Инициализация таймера
+        function initRaffleTimer() {
+            let storedStartTime = localStorage.getItem('roulette_start_time');
+            if (!storedStartTime) {
+                storedStartTime = Date.now();
+                localStorage.setItem('roulette_start_time', storedStartTime);
+            }
+            raffleEndTime = parseInt(storedStartTime) + raffleDurationMs;
+
+            updateCountdown();
+            const timerInterval = setInterval(updateCountdown, 1000);
+        }
+
+        function updateCountdown() {
+            const now = Date.now();
+            const timeLeft = raffleEndTime - now;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                document.getElementById('countdown').innerText = "ЗАВЕРШЕНО!";
+                showWinner();
+            } else {
+                const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                
+                document.getElementById('countdown').innerText = 
+                    `${String(days).padStart(2, '0')}д ${String(hours).padStart(2, '0')}ч ${String(minutes).padStart(2, '0')}м ${String(seconds).padStart(2, '0')}с`;
+            }
+            updateJoinButtonState();
+        }
+
+        // 2. Отображение участников
+        function renderParticipants() {
+            const participantsCircle = document.getElementById('participants-circle');
+            participantsCircle.innerHTML = '';
+            document.getElementById('participant-count').innerText = `Участников: ${participants.length}`;
+
+            const radius = 120; // Радиус, на котором располагаются аватарки
+            const totalParticipants = participants.length;
+
+            participants.forEach((p, index) => {
+                const angle = (index / totalParticipants) * 2 * Math.PI;
+                const x = radius * Math.cos(angle);
+                const y = radius * Math.sin(angle);
+
+                const participantDiv = document.createElement('div');
+                participantDiv.className = 'participant-item absolute flex flex-col items-center';
+                participantDiv.style.left = `calc(50% + ${x}px - 20px)`; /* 20px = половина ширины аватарки */
+                participantDiv.style.top = `calc(50% + ${y}px - 20px)`;  /* 20px = половина высоты аватарки */
+                participantDiv.style.transform = `rotate(${angle * 180 / Math.PI + 90}deg)`; /* Поворачиваем аватарку к центру */
+
+                const avatarImg = document.createElement('img');
+                avatarImg.className = 'participant-avatar';
+                avatarImg.src = p.avatar_url || `https://t.me/i/userpic/320/${p.username || 'default'}.jpg`;
+                avatarImg.alt = p.username;
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'participant-name';
+                nameSpan.innerText = `@${p.username}`;
+                nameSpan.style.transform = `rotate(-${angle * 180 / Math.PI + 90}deg)`; // Возвращаем текст в горизонтальное положение
+
+                participantDiv.appendChild(avatarImg);
+                participantDiv.appendChild(nameSpan);
+                participantsCircle.appendChild(participantDiv);
+            });
+        }
+
+        // 3. Логика кнопки "Участвовать"
+        const joinButton = document.getElementById('join-roulette-btn');
+        joinButton.addEventListener('click', () => {
+            if (!user) {
+                tg.showAlert("Вы не авторизованы. Пожалуйста, откройте бота через Telegram.");
+                return;
+            }
+            const myUsername = user.username.toLowerCase();
+            const alreadyJoined = participants.some(p => p.username.toLowerCase() === myUsername);
+
+            if (alreadyJoined) {
+                tg.showAlert("Вы уже участвуете в этом розыгрыше!");
+            } else {
+                participants.push({
+                    username: user.username,
+                    first_name: user.first_name,
+                    avatar_url: user.photo_url
+                });
+                localStorage.setItem('roulette_participants', JSON.stringify(participants));
+                renderParticipants();
+                tg.HapticFeedback.notificationOccurred('success');
+                tg.showNotification({
+                    type: 'success',
+                    message: "Вы успешно присоединились!"
+                });
+                updateJoinButtonState();
+            }
+        });
+
+        function updateJoinButtonState() {
+            if (!user) {
+                joinButton.disabled = true;
+                joinButton.innerText = "Авторизуйтесь в Telegram";
+                return;
+            }
+
+            const now = Date.now();
+            if (now >= raffleEndTime) {
+                joinButton.disabled = true;
+                joinButton.innerText = "Розыгрыш завершен";
+                return;
+            }
+
+            const myUsername = user.username.toLowerCase();
+            const alreadyJoined = participants.some(p => p.username.toLowerCase() === myUsername);
+
+            if (alreadyJoined) {
+                joinButton.disabled = true;
+                joinButton.innerText = "Вы участвуете";
+            } else {
+                joinButton.disabled = false;
+                joinButton.innerText = "Участвовать!";
+            }
+        }
+
+        // 4. Показать победителя
+        function showWinner() {
+            document.getElementById('join-roulette-btn').classList.add('hidden');
+            document.getElementById('participant-count').classList.add('hidden');
+            document.getElementById('countdown').classList.add('hidden');
+
+            const winnerDisplay = document.getElementById('winner-display');
+            winnerDisplay.classList.remove('hidden');
+
+            const winnerAvatarUrl = `https://t.me/i/userpic/320/${winnerUsername}.jpg`;
+            document.getElementById('winner-avatar').src = winnerAvatarUrl;
+            document.getElementById('winner-name').innerText = `@${winnerUsername}`;
+        }
+
+        // Запуск
+        initRaffleTimer();
+        renderParticipants();
+        tg.expand();
+    </script>
+</body>
+</html>
