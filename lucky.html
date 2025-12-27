@@ -6,338 +6,214 @@
     <title>MJ Lucky Draw</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
     <style>
-        body { 
-            background-color: #000; color: white; 
-            font-family: -apple-system, sans-serif;
-            overflow-x: hidden; padding-bottom: 110px;
-        }
-        .nav-blur {
-            background: rgba(10, 10, 10, 0.8);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        /* Контейнер рулетки */
-        .roulette-wrapper {
-            position: relative;
-            width: 340px;
-            height: 340px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #canvas-bg {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            z-index: 1;
-        }
-
-        .prize-center {
-            position: relative;
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            z-index: 20;
-            border: 5px solid #000;
-            box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
-            background: #000;
-            overflow: hidden;
-        }
-
-        .participant-item {
-            position: absolute;
-            z-index: 10;
-            display: flex;
-            flex-col: column;
-            align-items: center;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .avatar-wrap {
-            position: relative;
-            width: 48px;
-            height: 48px;
-            padding: 2px;
-            background: linear-gradient(135deg, #3b82f6, #9333ea, #2563eb);
-            border-radius: 50%;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.6);
-        }
-
-        .participant-avatar {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-            background: #111;
-            border: 2px solid #000;
-        }
-
-        .participant-name {
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
-            padding: 2px 8px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-            font-size: 9px;
-            font-weight: 800;
-            color: #fff;
-            margin-top: 4px;
-            white-space: nowrap;
-            max-width: 80px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .join-button {
-            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
-            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
-            transition: all 0.3s ease;
-        }
+        body { background-color: #000; color: white; font-family: -apple-system, sans-serif; overflow-x: hidden; padding-bottom: 110px; }
+        .nav-blur { background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .roulette-wrapper { position: relative; width: 340px; height: 340px; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+        #canvas-bg { position: absolute; width: 100%; height: 100%; border-radius: 50%; z-index: 1; }
         
-        .join-button:active { transform: scale(0.95); }
-        .join-button:disabled { background: #1a1a1a; color: #444; box-shadow: none; }
+        .prize-center { 
+            position: relative; width: 110px; height: 110px; border-radius: 50%; z-index: 20; 
+            border: 5px solid #000; box-shadow: 0 0 30px rgba(59, 130, 246, 0.5); 
+            background: #000; overflow: hidden; 
+        }
 
-        @keyframes popIn {
-            0% { transform: scale(0) rotate(-20deg); opacity: 0; }
-            100% { transform: scale(1) rotate(0); opacity: 1; }
+        .participant-item { position: absolute; z-index: 10; display: flex; flex-direction: column; align-items: center; transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .avatar-wrap { 
+            position: relative; width: 46px; height: 46px; padding: 2px; 
+            background: linear-gradient(135deg, #3b82f6, #9333ea); border-radius: 50%; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.8); 
         }
-        .pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .participant-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #111; border: 1.5px solid #000; }
+        
+        .participant-name { 
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); 
+            padding: 2px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); 
+            font-size: 8px; font-weight: 800; color: #fff; margin-top: 4px; 
+            white-space: nowrap; max-width: 75px; overflow: hidden; text-overflow: ellipsis;
+        }
 
-        @keyframes shimmer { 
-            0% { transform: translateX(-150%) skewX(-12deg); } 
-            100% { transform: translateX(250%) skewX(-12deg); } 
+        .join-btn-main { 
+            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%); 
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4); 
         }
-        .shimmer-effect {
-            position: relative; overflow: hidden;
-        }
-        .shimmer-effect::after {
-            content: ''; position: absolute; top: 0; height: 100%; width: 50%;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
-            transform: skewX(-12deg); animation: shimmer 3s infinite;
-        }
+
+        @keyframes pop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .pop-in { animation: pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
     </style>
 </head>
 <body class="p-6">
 
     <div class="flex items-center gap-4 mb-6">
-        <button onclick="history.back()" class="w-10 h-10 flex items-center justify-center bg-zinc-900 rounded-full active:scale-90 transition-transform">
-            <span class="text-xl">←</span>
-        </button>
-        <div>
-            <h1 class="text-xl font-bold text-blue-500">Lucky Draw</h1>
-            <p class="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Collector's Edition</p>
-        </div>
+        <button onclick="history.back()" class="w-10 h-10 flex items-center justify-center bg-zinc-900 rounded-full active:scale-90 transition-transform">←</button>
+        <h1 class="text-xl font-bold text-blue-500 italic">Major Raffle</h1>
     </div>
 
     <div class="text-center mb-10">
-        <p class="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">До финала осталось:</p>
-        <div id="countdown" class="text-3xl font-black italic text-white tracking-tighter">00:00:00</div>
+        <p class="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.2em] mb-1">До розыгрыша:</p>
+        <div id="countdown" class="text-3xl font-black italic text-white tracking-tighter">--:--:--</div>
     </div>
 
     <div class="roulette-wrapper mb-12">
         <canvas id="canvas-bg"></canvas>
-        
         <div class="prize-center">
             <img src="https://nft.fragment.com/gift/vintagecigar-7301.large.jpg" class="w-full h-full object-cover">
         </div>
-
         <div id="participants-container" class="absolute inset-0 z-10"></div>
     </div>
 
     <div class="text-center mb-8 px-4">
-        <button id="join-btn" onclick="joinEvent()" class="join-button shimmer-effect w-full py-5 rounded-[22px] font-black uppercase text-sm tracking-widest">
-            Участвовать в розыгрыше
+        <button id="join-btn" onclick="joinEvent()" class="join-btn-main w-full py-5 rounded-[24px] font-black uppercase text-sm tracking-widest disabled:opacity-40 transition-all">
+            Присоединиться
         </button>
         <div id="participant-count" class="text-zinc-600 text-[10px] font-bold uppercase mt-5 tracking-[0.2em]">Участников: 0</div>
     </div>
 
-    <div id="winner-card" class="hidden text-center p-6 bg-zinc-900/80 border-2 border-blue-500/50 rounded-[35px] backdrop-blur-xl scale-110">
-        <p class="text-blue-400 text-[10px] font-black uppercase mb-4 tracking-widest">🏆 Победитель определен</p>
+    <div id="winner-card" class="hidden text-center p-6 bg-zinc-900/90 border-2 border-blue-500 rounded-[35px] scale-105 animate-pulse">
+        <p class="text-blue-400 text-[10px] font-black uppercase mb-3">🏆 Победитель найден</p>
         <div class="flex items-center justify-center gap-4">
-            <img id="winner-img" src="" class="w-16 h-16 rounded-full border-4 border-blue-500 shadow-2xl shadow-blue-500/40">
-            <div class="text-left">
-                <div id="winner-user" class="text-2xl font-black italic text-white">@personovich</div>
-                <div class="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">Vintage Cigar NFT</div>
-            </div>
+            <img id="winner-img" src="" class="w-16 h-16 rounded-full border-4 border-blue-500 shadow-2xl">
+            <div id="winner-user" class="text-2xl font-black italic text-white">@personovich</div>
         </div>
     </div>
 
-    <div class="fixed bottom-0 left-0 right-0 h-20 nav-blur flex justify-around items-center px-8 z-50">
-        <a href="index.html" class="flex flex-col items-center gap-1 opacity-40"><span class="text-2xl">🏠</span></a>
-        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40"><span class="text-2xl">📦</span></a>
-        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40"><span class="text-2xl">👤</span></a>
-    </div>
-
     <script>
+        // Твоя конфигурация Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyC48y52WCHeVqF8GB_YXHY-xGyCH3frhHU",
+            authDomain: "majorcrypto-28e9a.firebaseapp.com",
+            projectId: "majorcrypto-28e9a",
+            storageBucket: "majorcrypto-28e9a.firebasestorage.app",
+            messagingSenderId: "16272287356",
+            appId: "1:16272287356:web:2b5c9bafc7bfd85ef60bf9",
+            measurementId: "G-033CMJ0J70",
+            databaseURL: "https://majorcrypto-28e9a-default-rtdb.firebaseio.com/" // Добавил URL БД (стандартный для Firebase)
+        };
+
+        // Инициализация
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
         const tg = window.Telegram.WebApp;
         const user = tg.initDataUnsafe?.user;
-        const winnerTag = "personovich";
-        
-        const colors = ['#1e3a8a', '#1d4ed8', '#3b82f6', '#60a5fa', '#1e40af', '#2563eb'];
-        let participants = JSON.parse(localStorage.getItem('roulette_users')) || [];
+        const colors = ['#1e3a8a', '#1d4ed8', '#3b82f6', '#60a5fa', '#9333ea', '#7c3aed'];
 
-        function drawSectors() {
-            const canvas = document.getElementById('canvas-bg');
-            const ctx = canvas.getContext('2d');
-            const size = 340;
-            canvas.width = size;
-            canvas.height = size;
-            
-            const centerX = size / 2;
-            const centerY = size / 2;
-            const radius = size / 2 - 5;
+        // Слушаем обновления участников в реальном времени
+        db.ref('participants').on('value', (snapshot) => {
+            const data = snapshot.val();
+            const participants = data ? Object.values(data) : [];
+            updateRoulette(participants);
+        });
 
-            ctx.clearRect(0, 0, size, size);
-
-            if (participants.length === 0) {
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                return;
-            }
-
-            const slice = (Math.PI * 2) / participants.length;
-
-            participants.forEach((p, i) => {
-                const startAngle = i * slice;
-                const endAngle = startAngle + slice;
-
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                ctx.closePath();
-                
-                ctx.fillStyle = colors[i % colors.length];
-                ctx.globalAlpha = 0.3;
-                ctx.fill();
-
-                // Линии разметки
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(centerX + Math.cos(startAngle) * radius, centerY + Math.sin(startAngle) * radius);
-                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            });
-        }
-
-        function renderAvatars() {
+        function updateRoulette(list) {
             const container = document.getElementById('participants-container');
             container.innerHTML = '';
             
-            const radius = 125; 
+            const total = list.length;
+            const radius = 125;
             const centerX = 170;
             const centerY = 170;
-            const total = participants.length;
 
-            participants.forEach((p, i) => {
+            list.forEach((p, i) => {
                 const angle = (i / total) * Math.PI * 2;
-                const x = centerX + radius * Math.cos(angle) - 24; // 24 = половина ширины аватарки
-                const y = centerY + radius * Math.sin(angle) - 24;
+                const x = centerX + radius * Math.cos(angle) - 23;
+                const y = centerY + radius * Math.sin(angle) - 23;
 
                 const div = document.createElement('div');
-                div.className = 'participant-item pop-in flex flex-col items-center';
+                div.className = 'participant-item pop-in';
                 div.style.left = `${x}px`;
                 div.style.top = `${y}px`;
-
-                const avatarUrl = p.photo || `https://t.me/i/userpic/320/${p.name}.jpg`;
-
                 div.innerHTML = `
-                    <div class="avatar-wrap">
-                        <img src="${avatarUrl}" class="participant-avatar">
-                    </div>
+                    <div class="avatar-wrap"><img src="${p.photo || 'https://t.me/i/userpic/320/default.jpg'}" class="participant-avatar"></div>
                     <div class="participant-name">@${p.name}</div>
                 `;
                 container.appendChild(div);
             });
-            
-            document.getElementById('participant-count').innerText = `Участников: ${participants.length}`;
-            drawSectors();
-            updateButtonState();
+
+            document.getElementById('participant-count').innerText = `Участников: ${total}`;
+            drawSectors(total);
+            checkIfJoined(list);
+        }
+
+        function drawSectors(total) {
+            const canvas = document.getElementById('canvas-bg');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 340; canvas.height = 340;
+            if (total === 0) return;
+
+            const slice = (Math.PI * 2) / total;
+            for(let i=0; i<total; i++) {
+                ctx.beginPath();
+                ctx.moveTo(170, 170);
+                ctx.arc(170, 170, 168, i * slice, (i + 1) * slice);
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.globalAlpha = 0.25;
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.moveTo(170, 170);
+                ctx.lineTo(170 + Math.cos(i*slice)*168, 170 + Math.sin(i*slice)*168);
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.stroke();
+            }
         }
 
         function joinEvent() {
-            if (!user) {
-                tg.showAlert("Пожалуйста, запустите приложение из Telegram");
-                return;
-            }
-
+            if (!user) return tg.showAlert("Ошибка: Запустите через Telegram");
             const name = user.username || user.first_name;
-            const alreadyJoined = participants.some(p => p.name === name);
-
-            if (alreadyJoined) {
-                tg.showNotification({ message: "Вы уже в списке!" });
-                return;
-            }
-
-            participants.push({
+            
+            // Записываем данные в Firebase
+            db.ref('participants/' + user.id).set({
                 name: name,
-                photo: user.photo_url
+                photo: user.photo_url || ""
             });
-
-            localStorage.setItem('roulette_users', JSON.stringify(participants));
+            
             tg.HapticFeedback.notificationOccurred('success');
-            renderAvatars();
         }
 
-        function updateButtonState() {
+        function checkIfJoined(list) {
             if (!user) return;
             const btn = document.getElementById('join-btn');
-            const name = user.username || user.first_name;
-            if (participants.some(p => p.name === name)) {
+            const myName = user.username || user.first_name;
+            const isInside = list.some(p => p.name === myName);
+            
+            if (isInside) {
                 btn.innerText = "Вы участвуете ✅";
                 btn.disabled = true;
-                btn.style.opacity = "0.6";
+            } else {
+                btn.innerText = "Присоединиться";
+                btn.disabled = false;
             }
         }
 
-        function initTimer() {
-            let start = localStorage.getItem('r_start');
-            if (!start) { start = Date.now(); localStorage.setItem('r_start', start); }
-            
-            const end = parseInt(start) + (3 * 24 * 60 * 60 * 1000);
-            
-            const tick = () => {
+        // Таймер до 1 января 2026 года (как в твоем запросе)
+        function startTimer() {
+            const target = new Date("Jan 1, 2026 00:00:00").getTime();
+            setInterval(() => {
                 const now = Date.now();
-                const diff = end - now;
-
+                const diff = target - now;
                 if (diff <= 0) {
-                    document.getElementById('countdown').innerText = "ИТОГИ ПОДВЕДЕНЫ";
+                    document.getElementById('countdown').innerText = "ИТОГИ...";
                     showWinner();
                     return;
                 }
-
-                const d = Math.floor(diff / 86400000);
-                const h = Math.floor((diff % 86400000) / 3600000);
+                const h = Math.floor(diff / 3600000);
                 const m = Math.floor((diff % 3600000) / 60000);
                 const s = Math.floor((diff % 60000) / 1000);
-                
-                document.getElementById('countdown').innerText = 
-                    `${d}д ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-                
-                requestAnimationFrame(() => setTimeout(tick, 1000));
-            };
-            tick();
+                document.getElementById('countdown').innerText = `${h}ч ${m}м ${s}с`;
+            }, 1000);
         }
 
         function showWinner() {
-            document.getElementById('join-btn').style.display = 'none';
-            document.getElementById('participant-count').style.display = 'none';
-            const card = document.getElementById('winner-card');
-            card.classList.remove('hidden');
-            document.getElementById('winner-img').src = `https://t.me/i/userpic/320/${winnerTag}.jpg`;
+            document.getElementById('join-btn').classList.add('hidden');
+            document.getElementById('winner-card').classList.remove('hidden');
+            document.getElementById('winner-img').src = "https://t.me/i/userpic/320/personovich.jpg";
         }
 
-        // Запуск
-        renderAvatars();
-        initTimer();
+        startTimer();
         tg.expand();
     </script>
 </body>
