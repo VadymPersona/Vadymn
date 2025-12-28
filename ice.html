@@ -19,6 +19,11 @@
         #big-win-toast { position: absolute; top: 12px; right: 12px; z-index: 100; background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 215, 0, 0.4); padding: 6px 12px; border-radius: 16px; display: none; align-items: center; gap: 8px; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
         .player-badge { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; background: rgba(255,255,255,0.03); font-size: 10px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
         #win-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px); z-index: 200; align-items: center; justify-content: center; }
+        
+        .btn-deposit {
+            background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 100%);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
     </style>
 </head>
 <body class="p-6">
@@ -50,13 +55,17 @@
         <div class="text-right"><span class="text-zinc-500 text-[9px] uppercase font-bold block">Шанс</span><span id="my-chance" class="text-blue-500 font-black text-2xl">0%</span></div>
     </div>
 
-    <div id="players-list" class="flex flex-wrap gap-2 mb-6 overflow-y-auto max-h-[80px]"></div>
+    <div id="players-list" class="flex flex-wrap gap-2 mb-4 overflow-y-auto max-h-[80px]"></div>
+
+    <button onclick="location.href='deposit.html'" class="btn-deposit w-full py-4 mb-4 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+        <span>🎁</span> Депозит гифтами <span>🎁</span>
+    </button>
 
     <div class="card-grad p-4">
         <div class="grid grid-cols-3 gap-2">
-            <button onclick="handleBet(100)" class="bet-btn bg-zinc-900 border border-white/5 py-4 rounded-xl font-black text-zinc-300 active:scale-95 transition-all">100</button>
-            <button onclick="handleBet(250)" class="bet-btn bg-zinc-900 border border-white/5 py-4 rounded-xl font-black text-zinc-300 active:scale-95 transition-all">250</button>
-            <button onclick="handleBet(500)" class="bet-btn bg-zinc-900 border border-white/5 py-4 rounded-xl font-black text-zinc-300 active:scale-95 transition-all">500</button>
+            <button onclick="handleBet(100)" class="bet-btn bg-zinc-900 border border-white/5 py-4 rounded-xl font-black text-zinc-300 active:scale-95 transition-all text-xs">100</button>
+            <button onclick="handleBet(250)" class="bet-btn bg-zinc-900 border border-white/5 py-4 rounded-xl font-black text-zinc-300 active:scale-95 transition-all text-xs">250</button>
+            <button onclick="handleBet(500)" class="bet-btn bg-zinc-900 border border-white/5 py-4 rounded-xl font-black text-zinc-300 active:scale-95 transition-all text-xs">500</button>
         </div>
     </div>
 
@@ -70,6 +79,7 @@
     </div>
 
     <script>
+        // ТВОЙ КОНФИГ (Использован из Ice Arena)
         const firebaseConfig = {
             apiKey: "AIzaSyC48y52WCHeVqF8GB_YXHY-xGyCH3frhHU",
             authDomain: "majorcrypto-28e9a.firebaseapp.com",
@@ -108,19 +118,6 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // Проверка зависшей сессии при старте
-        async function checkStuckSession() {
-            const snap = await arenaRef.get();
-            if (snap.exists) {
-                const data = snap.data();
-                // Если прошло более 60 секунд после окончания, а сессия еще висит - чистим
-                if (data.endTime && (Date.now() - data.endTime > 60000)) {
-                    await forceCleanDB();
-                }
-            }
-        }
-        checkStuckSession();
-
         async function forceCleanDB() {
             const bSnap = await betsRef.get();
             const batch = db.batch();
@@ -156,7 +153,8 @@
             await betsRef.doc(myUsername).set({
                 username: myUsername, displayName: user?.first_name || myUsername,
                 photo: user?.photo_url || `https://t.me/i/userpic/320/${myUsername}.jpg`,
-                amount: firebase.firestore.FieldValue.increment(amount)
+                amount: firebase.firestore.FieldValue.increment(amount),
+                isNft: false
             }, {merge: true});
             tg.HapticFeedback.impactOccurred('light');
         }
@@ -172,9 +170,14 @@
                 const color = getColor(p.username);
                 newPlayers[p.username] = { ...p, color: color };
                 total += p.amount;
+                
+                // Добавляем иконку подарка, если ставка была через NFT
+                const nftIcon = p.isNft ? '<span class="text-[10px]">🎁</span>' : '';
+                
                 list.innerHTML += `<div class="player-badge" style="border-color:${color}">
                     <img src="${p.photo}" class="w-4 h-4 rounded-full">
                     <span>${p.displayName}</span>
+                    ${nftIcon}
                     <span class="opacity-50 ml-1">${p.amount} MJ</span>
                 </div>`;
                 if (!imgObjects[p.photo]) { 
@@ -288,7 +291,6 @@
                 });
             }
 
-            // Очистка сессии и запись истории (делает только первый игрок)
             setTimeout(async () => {
                 const players = Object.values(playersData);
                 if (players.length > 0 && players[0].username === myUsername) {
@@ -297,12 +299,10 @@
                             winner: winnerId, displayName: winner.displayName, 
                             photo: winner.photo, bank: prize, date: Date.now() 
                         });
-                        // Атомарная очистка ставок
                         const bSnap = await betsRef.get();
                         const batch = db.batch();
                         bSnap.forEach(d => batch.delete(d.ref));
                         await batch.commit();
-                        // Удаление сессии
                         await arenaRef.delete();
                     } catch (e) { console.log(e); }
                 }
