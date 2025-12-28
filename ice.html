@@ -13,7 +13,7 @@
         .card-grad { background: linear-gradient(145deg, #111 0%, #050505 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; }
         #arena-container { position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 40px; overflow: hidden; background: #050505; border: 2px solid rgba(255,255,255,0.1); }
         #zones-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-        .arena-logo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 5; pointer-events: none; opacity: 0.1; }
+        .arena-logo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 5; pointer-events: none; opacity: 0.05; }
         .arena-logo h2 { font-size: 3rem; font-weight: 900; font-style: italic; text-transform: uppercase; color: white; border: 4px solid white; padding: 10px 20px; }
         #ball { position: absolute; width: 18px; height: 18px; background: #fff; border-radius: 50%; box-shadow: 0 0 20px #fff; z-index: 50; display: none; }
         .player-badge { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 14px; background: rgba(255,255,255,0.03); font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); }
@@ -23,14 +23,13 @@
 <body class="p-6">
 
     <div class="flex items-center justify-between mb-8">
-        <div class="timer-box bg-zinc-900/50 p-3 rounded-2xl border border-white/5">
-            <span id="round-num" class="text-blue-500 text-[10px] uppercase font-black block">Раунд #1</span>
-            <div id="timer-val" class="text-xl font-black italic tabular-nums">00:20</div>
+        <button onclick="location.href='cases.html'" class="text-zinc-400 text-2xl p-2 active:scale-75 transition-transform">←</button>
+        
+        <div class="timer-box bg-zinc-900/50 p-3 rounded-2xl border border-white/5 text-center min-w-[100px]">
+            <span id="round-num" class="text-blue-500 text-[10px] uppercase font-black block">Загрузка...</span>
+            <div id="timer-val" class="text-xl font-black italic tabular-nums">00:00</div>
         </div>
-        <div class="text-right">
-            <span class="text-zinc-500 text-[10px] uppercase font-black block">До начала</span>
-            <span class="text-zinc-400 text-xs">Ожидание ставок...</span>
-        </div>
+        <div class="w-12"></div>
     </div>
 
     <div id="arena-container" class="mb-6">
@@ -54,28 +53,38 @@
 
     <div class="card-grad p-5">
         <div class="grid grid-cols-3 gap-3">
-            <button onclick="handleBet(100)" class="bet-btn bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black active:scale-95">100</button>
-            <button onclick="handleBet(250)" class="bet-btn bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black active:scale-95">250</button>
-            <button onclick="handleBet(500)" class="bet-btn bg-blue-600 py-5 rounded-2xl font-black text-white active:scale-95">500</button>
+            <button onclick="handleBet(100)" class="bet-btn bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black text-zinc-300 active:scale-95 transition-all">100</button>
+            <button onclick="handleBet(250)" class="bet-btn bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black text-zinc-300 active:scale-95 transition-all">250</button>
+            <button onclick="handleBet(500)" class="bet-btn bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black text-zinc-300 active:scale-95 transition-all">500</button>
         </div>
     </div>
 
     <div id="win-modal">
         <div class="card-grad p-10 text-center w-[85%] border-blue-500/30">
             <div class="text-blue-500 text-[10px] font-black uppercase mb-6">Победитель раунда</div>
-            <img id="win-avatar" src="" class="w-24 h-24 rounded-full border-4 mx-auto mb-4 shadow-2xl">
+            <img id="win-avatar" src="" class="w-24 h-24 rounded-full border-4 mx-auto mb-4 shadow-2xl border-white/20">
             <div id="win-name" class="text-2xl font-bold mb-1">Username</div>
             <div id="win-prize" class="text-4xl font-black text-white mb-2">0 MJ</div>
         </div>
     </div>
 
     <script>
-        const firebaseConfig = { /* Вставьте ваш конфиг здесь */ };
+        // --- ЗАМЕНИТЕ ЭТОТ КОНФИГ НА ВАШ ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC48y52WCHeVqF8GB_YXHY-xGyCH3frhHU",
+            authDomain: "majorcrypto-28e9a.firebaseapp.com",
+            projectId: "majorcrypto-28e9a",
+            storageBucket: "majorcrypto-28e9a.firebasestorage.app",
+            messagingSenderId: "16272287356",
+            appId: "1:16272287356:web:2b5c9bafc7bfd85ef60bf9",
+            measurementId: "G-033CMJ0J70"
+        };
+        
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
         const user = tg.initDataUnsafe?.user;
-        const myUsername = (user?.username || `id${user?.id}`).toLowerCase();
+        const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
 
         const arenaRef = db.collection("ice_arena").doc("current_session");
         const betsRef = db.collection("ice_arena_bets");
@@ -109,29 +118,23 @@
             Object.values(playersData).forEach(p => {
                 const sliceAngle = (p.amount / total) * 2 * Math.PI;
                 
-                // Сектор
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
                 ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
                 ctx.fillStyle = p.color;
                 ctx.fill();
 
-                // Отрисовка аватарки и текста внутри зоны
                 const midAngle = startAngle + sliceAngle / 2;
-                const textDist = canvas.width * 0.3;
+                const textDist = canvas.width * 0.28;
                 const x = centerX + Math.cos(midAngle) * textDist;
                 const y = centerY + Math.sin(midAngle) * textDist;
 
                 ctx.save();
-                ctx.shadowBlur = 10; ctx.shadowColor = "black";
-                
-                // Круг под аватарку
                 ctx.beginPath();
                 ctx.arc(x, y, 22, 0, Math.PI * 2);
-                ctx.fillStyle = "white";
+                ctx.fillStyle = "rgba(0,0,0,0.3)";
                 ctx.fill();
 
-                // Аватарка
                 if (imgObjects[p.photo]) {
                     ctx.beginPath();
                     ctx.arc(x, y, 20, 0, Math.PI * 2);
@@ -140,11 +143,10 @@
                 }
                 ctx.restore();
 
-                // Текст (Юзернейм)
                 ctx.fillStyle = "white";
                 ctx.font = "bold 10px Arial";
                 ctx.textAlign = "center";
-                ctx.fillText(p.username.substring(0, 8), x, y + 35);
+                ctx.fillText(p.username.substring(0, 10), x, y + 32);
 
                 startAngle += sliceAngle;
             });
@@ -154,27 +156,28 @@
             if (isSpinning) return;
             const userRef = db.collection("users").doc(myUsername);
             const doc = await userRef.get();
-            if (doc.data().balance < amount) { tg.showAlert("Недостаточно MJ!"); return; }
+            if (!doc.exists || doc.data().balance < amount) { tg.showAlert("Недостаточно MJ!"); return; }
 
             await userRef.update({ balance: firebase.firestore.FieldValue.increment(-amount) });
             
             const arenaSnap = await arenaRef.get();
             if (!arenaSnap.exists) {
-                const lastRound = (await db.collection("ice_arena_history").limit(1).get()).size;
-                await arenaRef.set({ endTime: Date.now() + 20000, totalBank: amount, round: lastRound + 1 });
+                const history = await db.collection("ice_arena_history").get();
+                await arenaRef.set({ endTime: Date.now() + 20000, totalBank: amount, round: history.size + 1 });
             } else {
                 await arenaRef.update({ totalBank: firebase.firestore.FieldValue.increment(amount) });
             }
 
-            if (!imgObjects[user.photo_url]) {
+            const photoUrl = user?.photo_url || `https://t.me/i/userpic/320/${myUsername}.jpg`;
+            if (!imgObjects[photoUrl]) {
                 const img = new Image();
-                img.src = user.photo_url || `https://t.me/i/userpic/320/${user.username}.jpg`;
-                img.onload = () => { imgObjects[user.photo_url] = img; drawZones(); };
+                img.src = photoUrl;
+                img.onload = () => { imgObjects[photoUrl] = img; drawZones(); };
             }
 
             await betsRef.doc(myUsername).set({
                 username: myUsername,
-                photo: user.photo_url || `https://t.me/i/userpic/320/${user.username}.jpg`,
+                photo: photoUrl,
                 amount: firebase.firestore.FieldValue.increment(amount),
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             }, {merge: true});
@@ -191,14 +194,21 @@
                 const p = d.data();
                 if(!playersData[p.username]) playersData[p.username] = { ...p, color: colors[i % colors.length] };
                 else playersData[p.username].amount = p.amount;
+                
                 totalBank += p.amount;
                 i++;
 
                 const badge = document.createElement('div');
                 badge.className = 'player-badge';
-                badge.style.borderColor = playersData[p.username].color;
+                badge.style.borderColor = playersData[p.username].color + '88';
                 badge.innerHTML = `<img src="${p.photo}" class="w-4 h-4 rounded-full"><span style="color:${playersData[p.username].color}">${p.username}</span>`;
                 list.appendChild(badge);
+
+                if (!imgObjects[p.photo]) {
+                    const img = new Image();
+                    img.src = p.photo;
+                    img.onload = () => { imgObjects[p.photo] = img; drawZones(); };
+                }
             });
 
             document.getElementById('total-bank').innerText = totalBank;
@@ -209,13 +219,21 @@
         });
 
         arenaRef.onSnapshot(doc => {
-            if (!doc.exists) return;
+            if (!doc.exists) {
+                document.getElementById('round-num').innerText = "Ожидание...";
+                document.getElementById('timer-val').innerText = "00:20";
+                return;
+            }
             const data = doc.data();
             document.getElementById('round-num').innerText = `Раунд #${data.round || 1}`;
-            const interval = setInterval(() => {
+            
+            const timer = setInterval(() => {
                 const diff = Math.max(0, Math.floor((data.endTime - Date.now()) / 1000));
                 document.getElementById('timer-val').innerText = `00:${diff < 10 ? '0'+diff : diff}`;
-                if (diff <= 0) { clearInterval(interval); if(!isSpinning) runCrazyBall(); }
+                if (diff <= 0) { 
+                    clearInterval(timer); 
+                    if(!isSpinning) runCrazyBall(); 
+                }
             }, 1000);
         });
 
@@ -228,21 +246,22 @@
             ball.style.display = 'block';
 
             let posX = arena.offsetWidth / 2, posY = arena.offsetHeight / 2;
-            let velX = (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random() * 10);
-            let velY = (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random() * 10);
-            let friction = 0.988;
+            // Более сильный и случайный запуск
+            let velX = (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 15);
+            let velY = (Math.random() > 0.5 ? 1 : -1) * (20 + Math.random() * 15);
+            let friction = 0.99; 
 
             const move = setInterval(() => {
                 posX += velX; posY += velY;
 
-                if (posX <= 0 || posX >= arena.offsetWidth - 18) { velX *= -1; tg.HapticFeedback.impactOccurred('light'); }
-                if (posY <= 0 || posY >= arena.offsetHeight - 18) { velY *= -1; tg.HapticFeedback.impactOccurred('light'); }
+                if (posX <= 0 || posX >= arena.offsetWidth - 18) { velX *= -1.02; tg.HapticFeedback.impactOccurred('light'); }
+                if (posY <= 0 || posY >= arena.offsetHeight - 18) { velY *= -1.02; tg.HapticFeedback.impactOccurred('light'); }
 
                 velX *= friction; velY *= friction;
                 ball.style.left = posX + 'px';
                 ball.style.top = posY + 'px';
 
-                if (Math.abs(velX) + Math.abs(velY) < 0.3) {
+                if (Math.abs(velX) + Math.abs(velY) < 0.5) {
                     clearInterval(move);
                     determineWinner(posX + 9, posY + 9);
                 }
@@ -254,10 +273,11 @@
             let angle = Math.atan2(fy - centerY, fx - centerX);
             if (angle < 0) angle += 2 * Math.PI;
 
-            const total = Object.values(playersData).reduce((sum, p) => sum + p.amount, 0);
-            let curA = 0, winner = Object.values(playersData)[0];
+            const players = Object.values(playersData);
+            const total = players.reduce((sum, p) => sum + p.amount, 0);
+            let curA = 0, winner = players[0];
 
-            Object.values(playersData).forEach(p => {
+            players.forEach(p => {
                 const slice = (p.amount / total) * 2 * Math.PI;
                 if (angle >= curA && angle <= curA + slice) winner = p;
                 curA += slice;
@@ -269,19 +289,27 @@
             document.getElementById('win-prize').innerText = `${prize} MJ`;
             document.getElementById('win-modal').style.display = 'flex';
 
+            tg.HapticFeedback.notificationOccurred('success');
+
             setTimeout(async () => {
                 if (myUsername === winner.username) {
                     await db.collection("users").doc(myUsername).update({ balance: firebase.firestore.FieldValue.increment(prize) });
                 }
+                
+                // Только первый игрок в списке очищает БД во избежание конфликтов
                 if (Object.keys(playersData)[0] === myUsername) {
-                    await db.collection("ice_arena_history").add({ winner: winner.username, bank: total, time: Date.now() });
+                    await db.collection("ice_arena_history").add({ 
+                        winner: winner.username, 
+                        bank: total, 
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+                    });
                     await arenaRef.delete();
                     const snap = await betsRef.get();
                     const batch = db.batch();
                     snap.forEach(d => batch.delete(d.ref));
                     await batch.commit();
                 }
-                location.reload(); // Полная перезагрузка для чистого нового раунда
+                location.reload(); 
             }, 5000);
         }
 
