@@ -6,6 +6,8 @@
     <title>Major Wallet</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { 
@@ -19,13 +21,23 @@
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* Компактный баннер */
+        /* НОВОГОДНИЙ БАННЕР */
         .promo-banner {
-            background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(90deg, #064e3b 0%, #059669 100%);
+            border: 1px solid rgba(52, 211, 153, 0.3);
             animation: slideDown 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
         }
         
+        .tree-glow {
+            filter: drop-shadow(0 0 8px #10b981);
+            animation: treePulse 2s infinite ease-in-out;
+        }
+        @keyframes treePulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
         @keyframes slideDown {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -57,23 +69,20 @@
 
     <a href="lucky.html" class="block w-full mb-6">
         <div class="promo-banner w-full h-16 rounded-2xl flex items-center justify-between px-5 relative overflow-hidden active:scale-[0.98] transition-transform">
-            <div class="flex flex-col z-10">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-blue-200 opacity-80">Специальное событие</span>
-                <span class="text-sm font-black italic uppercase tracking-tight">Участвовать в Lucky Draw 🎰</span>
+            <div class="flex items-center gap-3 z-10">
+                <span class="text-2xl tree-glow">🎄</span>
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-emerald-100">Новогодний Конкурс</span>
+                    <span id="ny-timer" class="text-[11px] font-mono font-bold text-white drop-shadow-sm">Загрузка...</span>
+                </div>
             </div>
-            <div class="z-10 bg-white/20 p-2 rounded-xl">
+            <div class="z-10 bg-white/20 p-2 rounded-xl border border-white/20">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
             </div>
-            <div class="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 animate-[shimmer_3s_infinite]"></div>
+            <div class="absolute top-1 right-10 text-white opacity-20 text-[10px]">❄</div>
+            <div class="absolute bottom-2 left-1/4 text-white opacity-10 text-xs">❄</div>
         </div>
     </a>
-
-    <style>
-        @keyframes shimmer { 
-            0% { transform: translateX(-150%) skewX(-12deg); } 
-            100% { transform: translateX(250%) skewX(-12deg); } 
-        }
-    </style>
 
     <div class="flex flex-col items-center mb-8">
         <div class="relative mb-3">
@@ -109,12 +118,12 @@
 
     <div class="w-full mb-24">
         <div class="flex justify-between items-end mb-4 px-2">
-            <h3 class="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Активность</h3>
+            <h3 class="text-zinc-500 text-[10px] uppercase tracking-widest font-bold italic">Активность Cloud</h3>
             <span id="user-id-display" class="text-[9px] text-zinc-700 font-mono">ID: ...</span>
         </div>
         
         <div id="history-container" class="flex flex-col gap-2 max-h-[350px] overflow-y-auto pr-1">
-            <div class="text-center py-4 text-zinc-600 text-xs uppercase tracking-widest">Загрузка...</div>
+            <div class="text-center py-10 text-zinc-800 text-[10px] font-bold uppercase tracking-widest">Загрузка данных...</div>
         </div>
     </div>
 
@@ -122,9 +131,9 @@
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleModal(false)"></div>
         <div class="relative w-full bg-zinc-950 rounded-t-[40px] p-8 border-t border-white/10 shadow-2xl">
             <div class="w-12 h-1 bg-zinc-800 rounded-full mx-auto mb-8"></div>
-            <h2 class="text-2xl font-bold mb-2 text-center">Пополнение</h2>
+            <h2 class="text-2xl font-bold mb-2 text-center italic uppercase">Пополнение</h2>
             <div id="ton-connect-trigger" class="w-full flex justify-center mb-4 mt-6"></div>
-            <button onclick="toggleModal(false)" class="w-full py-4 rounded-2xl bg-zinc-900 text-zinc-400 font-bold text-sm">Закрыть</button>
+            <button onclick="toggleModal(false)" class="w-full py-4 rounded-2xl bg-zinc-900 text-zinc-400 font-bold text-sm uppercase tracking-widest">Закрыть</button>
         </div>
     </div>
 
@@ -144,73 +153,106 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        let lastJsonHash = "";
+        // FIREBASE КОНФИГ
+        const firebaseConfig = {
+            apiKey: "AIzaSyC48y52WCHeVqF8GB_YXHY-xGyCH3frhHU",
+            authDomain: "majorcrypto-28e9a.firebaseapp.com",
+            projectId: "majorcrypto-28e9a",
+            storageBucket: "majorcrypto-28e9a.firebasestorage.app",
+            messagingSenderId: "16272287356",
+            appId: "1:16272287356:web:2b5c9bafc7bfd85ef60bf9",
+            measurementId: "G-033CMJ0J70",
+            databaseURL: "https://majorcrypto-28e9a-default-rtdb.firebaseio.com/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
+        const tg = window.Telegram.WebApp;
         const user = tg.initDataUnsafe?.user;
+
+        // Таймер Нового Года
+        function startTimer() {
+            const countdown = () => {
+                const now = new Date();
+                const target = new Date(2026, 0, 1, 0, 0, 0);
+                const diff = target - now;
+                if (diff <= 0) {
+                    document.getElementById('ny-timer').innerText = "СОБЫТИЕ ЗАВЕРШЕНО";
+                    return;
+                }
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const m = Math.floor((diff / 1000 / 60) % 60);
+                const s = Math.floor((diff / 1000) % 60);
+                document.getElementById('ny-timer').innerText = `Конец через: ${d}д ${h}ч ${m}м ${s}с`;
+            }
+            setInterval(countdown, 1000);
+            countdown();
+        }
+        startTimer();
+
         if (user) {
+            const username = user.username ? user.username.toLowerCase() : `id${user.id}`;
             document.getElementById('user-name').innerText = user.first_name;
             document.getElementById('user-id-display').innerText = `ID: ${user.id}`;
-            document.getElementById('card-user-handle').innerText = user.username ? `@${user.username}` : user.first_name;
+            document.getElementById('card-user-handle').innerText = `@${username}`;
             
             const avatar = document.getElementById('user-avatar');
-            avatar.src = user.photo_url || `https://t.me/i/userpic/320/${user.username || 'default'}.jpg`;
+            avatar.src = user.photo_url || `https://t.me/i/userpic/320/${username}.jpg`;
             avatar.onload = () => {
                 avatar.classList.remove('opacity-0');
                 document.getElementById('avatar-loader').style.display = 'none';
             }
+
+            // РЕАЛЬНЫЙ БАЛАНС ИЗ FIREBASE
+            db.collection("users").doc(username).onSnapshot((doc) => {
+                let balance = 0;
+                if (doc.exists) {
+                    balance = doc.data().balance || 0;
+                } else {
+                    // Создаем запись если юзера нет
+                    db.collection("users").doc(username).set({ balance: 0, user_id: user.id });
+                }
+                document.getElementById('display-balance').innerText = balance.toFixed(2);
+                document.getElementById('ton-eq-balance').innerText = (balance * 0.0002).toFixed(4);
+            });
+
+            // РЕАЛЬНАЯ ИСТОРИЯ ИЗ FIREBASE
+            db.collection("transfers")
+                .where('to', '==', username)
+                .orderBy('timestamp', 'desc')
+                .limit(10)
+                .onSnapshot((snapshot) => {
+                    const container = document.getElementById('history-container');
+                    if (snapshot.empty) {
+                        container.innerHTML = '<div class="text-center text-zinc-800 text-[10px] py-10 uppercase tracking-widest font-bold">История пуста</div>';
+                        return;
+                    }
+                    container.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const tx = doc.data();
+                        const date = tx.timestamp ? new Date(tx.timestamp.seconds * 1000).toLocaleDateString() : 'MJ Net';
+                        container.insertAdjacentHTML('beforeend', `
+                            <div class="tx-item rate-badge p-3 flex justify-between items-center mb-1">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-black flex items-center justify-center text-lg">📥</div>
+                                    <div class="flex flex-col">
+                                        <span class="font-bold text-xs text-zinc-200">От @${tx.from || 'Admin'}</span>
+                                        <span class="text-[9px] text-zinc-600 uppercase font-bold">${date}</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="font-black text-sm text-blue-400">+${tx.amount} MJ</span>
+                                </div>
+                            </div>`);
+                    });
+                });
         }
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://vadympersona.github.io/Vadymn/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-trigger'
         });
-
-        async function loadHistory() {
-            try {
-                const response = await fetch('transactions.json?nocache=' + Date.now());
-                if (!response.ok) return;
-                const textData = await response.text();
-                if (textData === lastJsonHash) return; 
-                lastJsonHash = textData;
-                const history = JSON.parse(textData);
-                const container = document.getElementById('history-container');
-                container.innerHTML = '';
-                const cleanMyUser = user?.username?.toLowerCase().replace('@','');
-                let myBalance = 0;
-                const myHistory = history.filter(tx => cleanMyUser && (tx.to_user.toLowerCase().replace('@','') === cleanMyUser));
-                if (myHistory.length === 0) {
-                    container.innerHTML = '<div class="text-center text-zinc-800 text-[10px] py-10 uppercase tracking-widest font-bold">История пуста</div>';
-                } else {
-                    [...myHistory].reverse().forEach((tx) => {
-                        const amt = parseFloat(tx.amount_mj);
-                        myBalance += amt;
-                        let icon = '💸', title = 'Транзакция', color = 'text-white';
-                        if (tx.type === 'admin_grant') { icon = '🎁'; title = 'Подарок'; color = 'text-green-400'; }
-                        else if (tx.type === 'mining_win') { icon = '⛏'; title = 'Майнинг'; color = 'text-yellow-400'; }
-                        else if (tx.type === 'transfer_out') { icon = '📤'; title = 'Перевод'; color = 'text-red-500'; }
-                        else if (tx.type === 'transfer_in') { icon = '📥'; title = 'Получено'; color = 'text-blue-400'; }
-                        const prefix = amt > 0 ? '+' : '';
-                        container.insertAdjacentHTML('beforeend', `
-                            <div class="tx-item rate-badge p-3 flex justify-between items-center mb-1">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-black flex items-center justify-center text-lg">${icon}</div>
-                                    <div class="flex flex-col">
-                                        <span class="font-bold text-xs text-zinc-200">${tx.description || title}</span>
-                                        <span class="text-[9px] text-zinc-600 uppercase font-bold">${tx.date || 'MJ NET'}</span>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col items-end">
-                                    <span class="font-black text-sm ${color}">${prefix}${tx.amount_mj} MJ</span>
-                                    <span class="text-[9px] text-zinc-700 font-mono">${tx.amount_ton_eq} TON</span>
-                                </div>
-                            </div>`);
-                    });
-                }
-                document.getElementById('display-balance').innerText = myBalance.toFixed(2);
-                document.getElementById('ton-eq-balance').innerText = (myBalance * 0.0002).toFixed(4);
-            } catch (e) { console.error(e); }
-        }
 
         function toggleModal(show) {
             const m = document.getElementById('deposit-modal');
@@ -219,8 +261,6 @@
             tg.HapticFeedback.impactOccurred('light');
         }
 
-        loadHistory();
-        setInterval(loadHistory, 4000); 
         tg.expand();
     </script>
 </body>

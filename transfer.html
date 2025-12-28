@@ -5,82 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>MJ Transfer</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { 
-            background-color: #000; color: white; 
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            overflow-x: hidden;
-        }
-        .input-box {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.3s ease;
-        }
-        .input-box:focus-within {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.05);
-        }
-        .nav-blur {
-            background: rgba(10, 10, 10, 0.8);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .confirm-btn {
-            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
-            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
-        }
-        .confirm-btn:disabled {
-            background: #1a1a1a;
-            color: #444;
-            box-shadow: none;
-            opacity: 0.5;
-        }
-        #recipient-preview {
-            transition: all 0.3s ease;
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-        }
-        #recipient-preview.show {
-            max-height: 100px;
-            opacity: 1;
-            margin-bottom: 1.5rem;
-        }
+        body { background-color: #000; color: white; font-family: -apple-system, sans-serif; overflow-x: hidden; }
+        .input-box { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.3s ease; }
+        .input-box:focus-within { border-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
+        .confirm-btn { background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2); }
+        .confirm-btn:disabled { background: #1a1a1a; color: #444; box-shadow: none; opacity: 0.5; }
+        #recipient-preview { transition: all 0.3s ease; max-height: 0; opacity: 0; overflow: hidden; }
+        #recipient-preview.show { max-height: 100px; opacity: 1; margin-bottom: 1.5rem; }
     </style>
 </head>
 <body class="p-6">
 
     <div class="flex items-center gap-4 mb-8">
-        <button onclick="history.back()" class="w-10 h-10 flex items-center justify-center bg-zinc-900 rounded-full active:scale-90 transition-transform">
+        <button onclick="window.location.href='index.html'" class="w-10 h-10 flex items-center justify-center bg-zinc-900 rounded-full active:scale-90">
             <span class="text-xl">←</span>
         </button>
-        <h1 class="text-xl font-bold tracking-tight text-blue-500">Перевод MJ</h1>
+        <h1 class="text-xl font-bold tracking-tight text-blue-500 italic uppercase">Перевод MJ</h1>
     </div>
 
     <div id="recipient-preview" class="flex items-center gap-4 p-4 bg-zinc-900/50 border border-white/5 rounded-3xl">
         <div class="relative">
-            <img id="preview-avatar" src="" class="w-12 h-12 rounded-full border border-zinc-700 object-cover">
-            <div id="avatar-pulse" class="absolute inset-0 rounded-full bg-blue-500 animate-ping opacity-20"></div>
+            <img id="preview-avatar" src="https://t.me/i/userpic/320/default.jpg" class="w-12 h-12 rounded-full border border-zinc-700 object-cover">
         </div>
         <div class="flex flex-col">
-            <span id="preview-name" class="font-bold text-sm text-white">Пользователь...</span>
+            <span id="preview-name" class="font-bold text-sm text-white italic uppercase">Поиск...</span>
             <span id="preview-handle" class="text-[10px] text-zinc-500 font-mono">@username</span>
         </div>
     </div>
 
     <div class="space-y-6">
         <div>
-            <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold ml-2 mb-2 block">Кому отправить</label>
+            <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold ml-2 mb-2 block italic">Кому отправить</label>
             <div class="input-box flex items-center p-4 rounded-2xl">
                 <span class="text-zinc-500 mr-2 font-bold">@</span>
                 <input type="text" id="recipient" placeholder="Введите username" 
                     class="bg-transparent border-none outline-none w-full text-white font-medium placeholder:text-zinc-700">
             </div>
+            <p id="error-user" class="text-[9px] text-red-500 mt-2 ml-2 hidden uppercase font-bold tracking-tighter">Пользователь не найден</p>
         </div>
 
         <div>
-            <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold ml-2 mb-2 block">Сумма MJ</label>
+            <label class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold ml-2 mb-2 block italic">Сумма MJ</label>
             <div class="input-box flex items-center p-4 rounded-2xl">
                 <input type="number" id="amount" placeholder="0.00" 
                     class="bg-transparent border-none outline-none w-full text-white text-2xl font-black italic placeholder:text-zinc-800">
@@ -89,96 +58,100 @@
         </div>
 
         <div class="bg-zinc-950 border border-white/5 rounded-2xl p-4 space-y-3">
-            <div class="flex justify-between text-xs">
-                <span class="text-zinc-500">Баланс: <span id="current-balance" class="text-zinc-300">0.00</span></span>
-                <span class="text-zinc-500">Комиссия: <span id="fee-display" class="text-zinc-300">0.00</span></span>
+            <div class="flex justify-between text-[10px] uppercase font-bold tracking-tighter">
+                <span class="text-zinc-500 italic">Баланс: <span id="current-balance" class="text-zinc-300">0.00</span></span>
+                <span class="text-zinc-500 italic">Комиссия (5%): <span id="fee-display" class="text-zinc-300">0.00</span></span>
             </div>
             <div class="flex justify-between text-sm border-t border-white/5 pt-3">
-                <span class="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">К списанию</span>
+                <span class="text-zinc-400 font-black uppercase text-[10px] tracking-widest">Итого к списанию</span>
                 <span id="total-display" class="text-white font-black italic">0.00 MJ</span>
             </div>
         </div>
 
         <button id="send-btn" disabled onclick="processTransfer()" 
-            class="confirm-btn w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all active:scale-95">
-            Отправить MJ
+            class="confirm-btn w-full py-5 rounded-3xl font-black uppercase tracking-widest text-sm transition-all active:scale-95">
+            Подтвердить отправку
         </button>
     </div>
 
-    <div class="fixed bottom-0 left-0 right-0 h-20 nav-blur flex justify-around items-center px-8 z-50">
-        <a href="index.html" class="flex flex-col items-center gap-1 opacity-40">
-            <span class="text-2xl">🏠</span>
-            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Главная</span>
-        </a>
-        <a href="cases.html" class="flex flex-col items-center gap-1 opacity-40">
-            <span class="text-2xl">📦</span>
-            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Кейсы</span>
-        </a>
-        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40">
-            <span class="text-2xl">👤</span>
-            <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Профиль</span>
-        </a>
-    </div>
-
     <script>
-        const tg = window.Telegram.WebApp;
-        let myBalance = 0;
-        const user = tg.initDataUnsafe?.user;
+        // Инициализация Firebase с твоим конфигом
+        const firebaseConfig = {
+            apiKey: "AIzaSyC48y52WCHeVqF8GB_YXHY-xGyCH3frhHU",
+            authDomain: "majorcrypto-28e9a.firebaseapp.com",
+            projectId: "majorcrypto-28e9a",
+            storageBucket: "majorcrypto-28e9a.firebasestorage.app",
+            messagingSenderId: "16272287356",
+            appId: "1:16272287356:web:2b5c9bafc7bfd85ef60bf9",
+            measurementId: "G-033CMJ0J70",
+            databaseURL: "https://majorcrypto-28e9a-default-rtdb.firebaseio.com/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-        // 1. Инициализация баланса
-        async function fetchBalance() {
-            try {
-                const response = await fetch('transactions.json?nocache=' + Date.now());
-                const data = await response.json();
-                const cleanMyUser = user?.username?.toLowerCase().replace('@','');
-                
-                let total = 0;
-                data.forEach(tx => {
-                    if(tx.to_user.toLowerCase().replace('@','') === cleanMyUser) {
-                        total += parseFloat(tx.amount_mj);
-                    }
-                });
-                myBalance = total;
-                document.getElementById('current-balance').innerText = myBalance.toFixed(2) + " MJ";
-            } catch (e) { console.error(e); }
+        const tg = window.Telegram.WebApp;
+        const currentUser = tg.initDataUnsafe?.user;
+        let myBalance = 0;
+        let targetUserFound = null;
+
+        // 1. Получение твоего баланса
+        async function fetchMyData() {
+            if (!currentUser) return;
+            const myUsername = currentUser.username ? currentUser.username.toLowerCase() : `id${currentUser.id}`;
+            db.collection("users").doc(myUsername).onSnapshot((doc) => {
+                if (doc.exists) {
+                    myBalance = doc.data().balance || 0;
+                    document.getElementById('current-balance').innerText = myBalance.toFixed(2) + " MJ";
+                }
+            });
         }
 
-        // 2. Логика поиска пользователя и отображения аватарки
+        // 2. Поиск получателя
         const recipientInput = document.getElementById('recipient');
         const previewBlock = document.getElementById('recipient-preview');
         const previewAvatar = document.getElementById('preview-avatar');
         const previewName = document.getElementById('preview-name');
         const previewHandle = document.getElementById('preview-handle');
+        const errorUser = document.getElementById('error-user');
 
         let debounceTimer;
         recipientInput.addEventListener('input', () => {
             clearTimeout(debounceTimer);
-            const val = recipientInput.value.trim().replace('@', '');
+            const val = recipientInput.value.trim().toLowerCase().replace('@', '');
             
             if (val.length >= 3) {
-                debounceTimer = setTimeout(() => {
-                    // Эффект поиска
-                    previewBlock.classList.add('show');
-                    previewName.innerText = "Поиск...";
-                    previewHandle.innerText = "@" + val;
-                    // Пытаемся получить аватарку через публичный сервис t.me
-                    previewAvatar.src = `https://t.me/i/userpic/320/${val}.jpg`;
+                previewBlock.classList.add('show');
+                previewName.innerText = "Поиск...";
+                previewName.style.color = "#fff";
+                previewHandle.innerText = "@" + val;
+
+                debounceTimer = setTimeout(async () => {
+                    const userDoc = await db.collection("users").doc(val).get();
                     
-                    // В реальности здесь можно сделать fetch к вашей базе пользователей
-                    // Для красоты просто меняем имя через секунду
-                    setTimeout(() => { 
-                        previewName.innerText = "Пользователь найден"; 
-                    }, 500);
-                    
+                    if (userDoc.exists) {
+                        const data = userDoc.data();
+                        targetUserFound = { username: val, ...data };
+                        previewName.innerText = data.first_name || "Пользователь найден";
+                        previewName.style.color = "#3b82f6";
+                        previewAvatar.src = data.photo_url || `https://t.me/i/userpic/320/${val}.jpg`;
+                        errorUser.classList.add('hidden');
+                    } else {
+                        targetUserFound = null;
+                        previewName.innerText = "Не найден";
+                        previewName.style.color = "#ef4444";
+                        previewAvatar.src = "https://t.me/i/userpic/320/default.jpg";
+                        errorUser.classList.remove('hidden');
+                    }
                     updateSummary();
-                }, 400);
+                }, 600);
             } else {
                 previewBlock.classList.remove('show');
+                targetUserFound = null;
                 updateSummary();
             }
         });
 
-        // 3. Расчеты
+        // 3. Валидация суммы и кнопки
         const amountInput = document.getElementById('amount');
         const sendBtn = document.getElementById('send-btn');
 
@@ -191,52 +164,76 @@
             const totalEl = document.getElementById('total-display');
             totalEl.innerText = total.toFixed(2) + " MJ";
 
-            const hasRecipient = recipientInput.value.trim().length >= 3;
+            // Проверки: сумма > 0, хватает баланса, не самому себе
+            const myId = currentUser?.username?.toLowerCase() || `id${currentUser?.id}`;
             const canAfford = val > 0 && total <= myBalance;
-            const notSelf = recipientInput.value.trim().toLowerCase().replace('@','') !== user?.username?.toLowerCase();
+            const notSelf = recipientInput.value.trim().toLowerCase().replace('@','') !== myId;
 
-            sendBtn.disabled = !(hasRecipient && canAfford && notSelf);
+            sendBtn.disabled = !(targetUserFound && canAfford && notSelf);
             totalEl.style.color = (total > myBalance) ? "#ef4444" : "#fff";
         }
 
         amountInput.addEventListener('input', updateSummary);
 
-        // 4. Отправка
+        // 4. Процесс перевода через Транзакцию (Безопасно)
         async function processTransfer() {
-            const recipient = recipientInput.value.trim().replace('@', '');
-            const amount = parseFloat(amountInput.value);
-            const sender = user?.username || user?.first_name;
+            if (!targetUserFound || !currentUser) return;
 
-            tg.showConfirm(`Вы подтверждаете перевод ${amount} MJ для @${recipient}?`, async (ok) => {
+            const amount = parseFloat(amountInput.value);
+            const fee = amount * 0.05;
+            const total = amount + fee;
+            const myId = currentUser.username ? currentUser.username.toLowerCase() : `id${currentUser.id}`;
+            const targetId = targetUserFound.username;
+
+            tg.showConfirm(`Вы уверены, что хотите отправить ${amount} MJ пользователю @${targetId}?`, async (ok) => {
                 if (ok) {
+                    sendBtn.disabled = true;
+                    sendBtn.innerText = "ОБРАБОТКА...";
+
                     try {
-                        sendBtn.disabled = true;
-                        sendBtn.innerText = "ОТПРАВКА...";
-                        
-                        const response = await fetch('transfer.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ sender, recipient, amount })
+                        await db.runTransaction(async (transaction) => {
+                            const myRef = db.collection("users").doc(myId);
+                            const targetRef = db.collection("users").doc(targetId);
+
+                            const mySnap = await transaction.get(myRef);
+                            if (!mySnap.exists || mySnap.data().balance < total) {
+                                throw "Недостаточно MJ на балансе";
+                            }
+
+                            // 1. Снимаем у отправителя (сумма + комиссия)
+                            transaction.update(myRef, { 
+                                balance: firebase.firestore.FieldValue.increment(-total) 
+                            });
+
+                            // 2. Начисляем получателю (чистая сумма)
+                            transaction.update(targetRef, { 
+                                balance: firebase.firestore.FieldValue.increment(amount) 
+                            });
+                            
+                            // 3. Записываем в историю
+                            const historyRef = db.collection("transfers").doc();
+                            transaction.set(historyRef, {
+                                from: myId,
+                                to: targetId,
+                                amount: amount,
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                            });
                         });
 
-                        const result = await response.json();
-                        if (result.success) {
-                            tg.HapticFeedback.notificationOccurred('success');
-                            tg.showAlert("✅ Успешно отправлено!");
-                            location.href = 'index.html';
-                        } else {
-                            tg.showAlert("❌ Ошибка: " + result.error);
-                            sendBtn.disabled = false;
-                        }
+                        tg.HapticFeedback.notificationOccurred('success');
+                        tg.showAlert("✅ Успешно! Перевод отправлен.");
+                        window.location.href = 'index.html';
+
                     } catch (e) {
-                        tg.showAlert("❌ Ошибка сервера");
+                        tg.showAlert("❌ Ошибка: " + e);
                         sendBtn.disabled = false;
+                        sendBtn.innerText = "ПОДТВЕРДИТЬ ОТПРАВКУ";
                     }
                 }
             });
         }
 
-        fetchBalance();
+        fetchMyData();
         tg.expand();
     </script>
 </body>
