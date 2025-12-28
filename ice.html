@@ -19,11 +19,7 @@
         #big-win-toast { position: absolute; top: 12px; right: 12px; z-index: 100; background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 215, 0, 0.4); padding: 6px 12px; border-radius: 16px; display: none; align-items: center; gap: 8px; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
         .player-badge { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; background: rgba(255,255,255,0.03); font-size: 10px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
         #win-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px); z-index: 200; align-items: center; justify-content: center; }
-        
-        .btn-deposit {
-            background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 100%);
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-        }
+        .btn-deposit { background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 100%); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
     </style>
 </head>
 <body class="p-6">
@@ -79,19 +75,28 @@
     </div>
 
     <script>
-        // ТВОЙ КОНФИГ (Использован из Ice Arena)
-        const firebaseConfig = {
+        // Инициализация двух баз данных
+        const arenaConfig = {
             apiKey: "AIzaSyC48y52WCHeVqF8GB_YXHY-xGyCH3frhHU",
             authDomain: "majorcrypto-28e9a.firebaseapp.com",
             projectId: "majorcrypto-28e9a",
             storageBucket: "majorcrypto-28e9a.firebasestorage.app",
-            messagingSenderId: "16272287356",
-            appId: "1:16272287356:web:2b5c9bafc7bfd85ef60bf9",
-            measurementId: "G-033CMJ0J70"
+            appId: "1:16272287356:web:2b5c9bafc7bfd85ef60bf9"
         };
-        
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        const inventoryConfig = {
+            apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg",
+            authDomain: "majorinventory-df164.firebaseapp.com",
+            projectId: "majorinventory-df164",
+            storageBucket: "majorinventory-df164.firebasestorage.app",
+            appId: "1:603741122650:web:35e730ab0448331eb3e863"
+        };
+
+        const arenaApp = firebase.initializeApp(arenaConfig, "arena");
+        const inventoryApp = firebase.initializeApp(inventoryConfig, "inventory");
+
+        const db = arenaApp.firestore();
+        const dbInv = inventoryApp.firestore();
+
         const tg = window.Telegram.WebApp;
         const user = tg.initDataUnsafe?.user;
         const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
@@ -117,15 +122,6 @@
         function resize() { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; draw(); }
         window.addEventListener('resize', resize);
         resize();
-
-        async function forceCleanDB() {
-            const bSnap = await betsRef.get();
-            const batch = db.batch();
-            bSnap.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-            await arenaRef.delete();
-            location.reload();
-        }
 
         db.collection("ice_arena_history").orderBy("bank", "desc").limit(1).onSnapshot(s => {
             if(!s.empty) {
@@ -154,7 +150,8 @@
                 username: myUsername, displayName: user?.first_name || myUsername,
                 photo: user?.photo_url || `https://t.me/i/userpic/320/${myUsername}.jpg`,
                 amount: firebase.firestore.FieldValue.increment(amount),
-                isNft: false
+                isNft: false,
+                stakedItems: []
             }, {merge: true});
             tg.HapticFeedback.impactOccurred('light');
         }
@@ -170,32 +167,22 @@
                 const color = getColor(p.username);
                 newPlayers[p.username] = { ...p, color: color };
                 total += p.amount;
-                
-                // Добавляем иконку подарка, если ставка была через NFT
-                const nftIcon = p.isNft ? '<span class="text-[10px]">🎁</span>' : '';
-                
+                const nftIcon = p.isNft ? '<span>🎁</span>' : '';
                 list.innerHTML += `<div class="player-badge" style="border-color:${color}">
                     <img src="${p.photo}" class="w-4 h-4 rounded-full">
-                    <span>${p.displayName}</span>
-                    ${nftIcon}
+                    <span>${p.displayName}</span> ${nftIcon}
                     <span class="opacity-50 ml-1">${p.amount} MJ</span>
                 </div>`;
                 if (!imgObjects[p.photo]) { 
-                    const img = new Image(); 
-                    img.src = p.photo; 
-                    img.onload = draw; 
-                    imgObjects[p.photo] = img; 
+                    const img = new Image(); img.src = p.photo; img.onload = draw; imgObjects[p.photo] = img; 
                 }
             });
             playersData = newPlayers;
             document.getElementById('total-bank').innerText = total;
             const me = playersData[myUsername];
             document.getElementById('my-chance').innerText = me ? Math.round((me.amount / total) * 100) + "%" : "0%";
-            
             if (Object.keys(newPlayers).length >= 2) {
-                arenaRef.get().then(doc => {
-                    if (doc.exists && !doc.data().active) arenaRef.update({ active: true, endTime: Date.now() + 20000 });
-                });
+                arenaRef.get().then(doc => { if (doc.exists && !doc.data().active) arenaRef.update({ active: true, endTime: Date.now() + 20000 }); });
             }
             draw();
         });
@@ -208,44 +195,27 @@
             }
             const data = doc.data();
             document.getElementById('round-num').innerText = `Раунд #${data.round}`;
-            
-            if (data.winner && !isSpinning && !isProcessed) { 
-                showResult(data.winner, data.totalBankAtEnd || 0); 
-                return; 
-            }
-
+            if (data.winner && !isSpinning && !isProcessed) { showResult(data.winner, data.totalBankAtEnd || 0); return; }
             clearInterval(timerInterval);
             if (!data.active) return;
-
             timerInterval = setInterval(() => {
                 const diff = Math.max(0, Math.floor((data.endTime - Date.now()) / 1000));
                 document.getElementById('timer-val').innerText = `00:${diff < 10 ? '0'+diff : diff}`;
-                if (diff <= 0 && !isSpinning && !isProcessed) {
-                    startFinalProcess();
-                }
+                if (diff <= 0 && !isSpinning && !isProcessed) startFinalProcess();
             }, 1000);
         });
 
         async function startFinalProcess() {
             isSpinning = true;
             document.querySelectorAll('.bet-btn').forEach(b => b.disabled = true);
-            
             const players = Object.values(playersData);
             if (players.length === 0) return;
-
             if (players[0].username === myUsername) {
                 const total = players.reduce((s, p) => s + p.amount, 0);
                 const rand = Math.random() * total;
                 let current = 0, winner = players[0];
-                for (let p of players) {
-                    current += p.amount;
-                    if (rand <= current) { winner = p; break; }
-                }
-                await arenaRef.update({ 
-                    winner: winner.username, 
-                    totalBankAtEnd: total,
-                    status: 'closed'
-                });
+                for (let p of players) { current += p.amount; if (rand <= current) { winner = p; break; } }
+                await arenaRef.update({ winner: winner.username, totalBankAtEnd: total, status: 'closed' });
             }
             runBallAnimation();
         }
@@ -256,7 +226,6 @@
             ball.style.display = 'block';
             let px = arena.offsetWidth/2, py = arena.offsetHeight/2;
             let vx = (Math.random()-0.5)*35, vy = (Math.random()-0.5)*35;
-
             const move = setInterval(() => {
                 px += vx; py += vy;
                 if (px<=0 || px>=arena.offsetWidth-18) { vx *= -1; tg.HapticFeedback.impactOccurred('light'); }
@@ -265,10 +234,7 @@
                 ball.style.left = px+'px'; ball.style.top = py+'px';
                 if (Math.abs(vx) + Math.abs(vy) < 0.25) { 
                     clearInterval(move); 
-                    arenaRef.get().then(snap => {
-                        const data = snap.data();
-                        if(data.winner) showResult(data.winner, data.totalBankAtEnd);
-                    });
+                    arenaRef.get().then(snap => { const data = snap.data(); if(data.winner) showResult(data.winner, data.totalBankAtEnd); });
                 }
             }, 16);
         }
@@ -277,7 +243,7 @@
             if (isProcessed) return;
             isProcessed = true;
             
-            const winner = playersData[winnerId] || { displayName: winnerId, photo: '' };
+            const winner = playersData[winnerId];
             const prize = Math.floor(totalBank * 0.95);
             
             document.getElementById('win-avatar').src = winner.photo;
@@ -285,29 +251,51 @@
             document.getElementById('win-prize').innerText = `${prize} MJ`;
             document.getElementById('win-modal').style.display = 'flex';
 
-            if (myUsername === winnerId) {
-                await db.collection("users").doc(myUsername).update({ 
-                    balance: firebase.firestore.FieldValue.increment(prize) 
-                });
+            // ЛОГИКА ПЕРЕДАЧИ ПОДАРКОВ (выполняет только первый игрок в списке для синхронизации)
+            const playersArr = Object.values(playersData);
+            if (playersArr[0].username === myUsername) {
+                try {
+                    // Собираем все подарки из всех ставок раунда
+                    let allGifts = [];
+                    playersArr.forEach(p => {
+                        if (p.stakedItems && p.stakedItems.length > 0) {
+                            allGifts = allGifts.concat(p.stakedItems);
+                        }
+                    });
+
+                    // Отправляем MJ победителю
+                    await db.collection("users").doc(winnerId).update({ 
+                        balance: firebase.firestore.FieldValue.increment(prize) 
+                    });
+
+                    // Отправляем ВСЕ подарки победителю в Конфиг Инвентаря
+                    if (allGifts.length > 0) {
+                        const batch = dbInv.batch();
+                        allGifts.forEach(gift => {
+                            const newGiftRef = dbInv.collection("users").doc(winnerId.toLowerCase()).collection("inventory").doc();
+                            batch.set(newGiftRef, {
+                                name: gift.name,
+                                image: gift.image,
+                                dateAdded: Date.now()
+                            });
+                        });
+                        await batch.commit();
+                    }
+
+                    // Запись истории и очистка
+                    await db.collection("ice_arena_history").add({ 
+                        winner: winnerId, displayName: winner.displayName, 
+                        photo: winner.photo, bank: prize, date: Date.now() 
+                    });
+                    const bSnap = await betsRef.get();
+                    const bch = db.batch();
+                    bSnap.forEach(d => bch.delete(d.ref));
+                    await bch.commit();
+                    await arenaRef.delete();
+                } catch (e) { console.error("Result process error:", e); }
             }
 
-            setTimeout(async () => {
-                const players = Object.values(playersData);
-                if (players.length > 0 && players[0].username === myUsername) {
-                    try {
-                        await db.collection("ice_arena_history").add({ 
-                            winner: winnerId, displayName: winner.displayName, 
-                            photo: winner.photo, bank: prize, date: Date.now() 
-                        });
-                        const bSnap = await betsRef.get();
-                        const batch = db.batch();
-                        bSnap.forEach(d => batch.delete(d.ref));
-                        await batch.commit();
-                        await arenaRef.delete();
-                    } catch (e) { console.log(e); }
-                }
-                location.reload();
-            }, 5000);
+            setTimeout(() => location.reload(), 6000);
         }
 
         function draw() {
@@ -315,30 +303,19 @@
             const total = players.reduce((s, p) => s + p.amount, 0);
             ctx.clearRect(0,0,canvas.width,canvas.height);
             if (!total) return;
-            
             let start = 0;
-            const centerX = canvas.width/2;
-            const centerY = canvas.height/2;
-
+            const centerX = canvas.width/2, centerY = canvas.height/2;
             players.forEach(p => {
                 const slice = (p.amount/total)*2*Math.PI;
                 ctx.beginPath(); ctx.moveTo(centerX, centerY);
                 ctx.arc(centerX, centerY, canvas.width, start, start+slice);
                 ctx.fillStyle = p.color; ctx.fill();
-
                 const midAngle = start + slice/2;
                 const dist = canvas.width * 0.3;
-                const ax = centerX + Math.cos(midAngle) * dist;
-                const ay = centerY + Math.sin(midAngle) * dist;
-                
+                const ax = centerX + Math.cos(midAngle) * dist, ay = centerY + Math.sin(midAngle) * dist;
                 if (imgObjects[p.photo]) {
-                    ctx.save();
-                    ctx.beginPath(); ctx.arc(ax, ay, 27, 0, Math.PI*2);
-                    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fill();
-                    ctx.beginPath(); ctx.arc(ax, ay, 25, 0, Math.PI*2);
-                    ctx.clip();
-                    ctx.drawImage(imgObjects[p.photo], ax-25, ay-25, 50, 50);
-                    ctx.restore();
+                    ctx.save(); ctx.beginPath(); ctx.arc(ax, ay, 27, 0, Math.PI*2); ctx.clip();
+                    ctx.drawImage(imgObjects[p.photo], ax-25, ay-25, 50, 50); ctx.restore();
                 }
                 start += slice;
             });
