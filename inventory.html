@@ -31,10 +31,18 @@
             border-radius: 24px;
             padding: 12px;
             text-align: center;
-            transition: transform 0.2s;
+            transition: all 0.2s ease;
+            animation: fadeIn 0.5s ease forwards;
         }
 
-        .nft-card:active { transform: scale(0.95); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nft-card:active {
+            transform: scale(0.95);
+        }
 
         .nft-image {
             width: 100%;
@@ -46,14 +54,15 @@
         }
 
         .withdraw-btn {
-            background-color: #3b82f6;
+            background: #3b82f6;
             color: white;
             width: 100%;
             padding: 10px;
             border-radius: 12px;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 12px;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         #error-modal {
@@ -76,16 +85,16 @@
         <div class="flex-1">
             <h1 class="text-2xl font-black italic tracking-tighter uppercase">INVENTORY</h1>
         </div>
-        <div id="item-count" class="bg-zinc-900 px-3 py-1 rounded-full text-xs text-zinc-400 font-bold whitespace-nowrap">0 ITEMS</div>
+        <div id="item-count" class="bg-zinc-900 px-3 py-1 rounded-full text-xs text-zinc-400 font-bold whitespace-nowrap uppercase">0 Items</div>
     </div>
 
     <div id="inventory-list" class="inventory-grid">
         <div class="col-span-2 text-center py-20 text-zinc-600 font-bold text-sm animate-pulse" id="loader">
-            Загрузка предметов...
+            ЗАГРУЗКА ИНВЕНТАРЯ...
         </div>
     </div>
 
-    <div id="empty-state" class="hidden flex flex-col items-center justify-center py-24">
+    <div id="empty-state" class="hidden flex flex-col items-center justify-center py-32">
         <h2 class="text-zinc-500 font-black uppercase tracking-[0.3em] text-2xl">ПУСТО</h2>
         <p class="text-zinc-600 text-sm mt-2 font-medium">У вас пока нет предметов</p>
     </div>
@@ -104,7 +113,7 @@
     </div>
 
     <script>
-        // ТВОЙ ОБНОВЛЕННЫЙ КОНФИГ ИЗ ПОСЛЕДНЕГО СООБЩЕНИЯ
+        // ТВОЙ АКТУАЛЬНЫЙ КОНФИГ FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg",
             authDomain: "majorinventory-df164.firebaseapp.com",
@@ -115,12 +124,12 @@
             measurementId: "G-7GS1M09F4T"
         };
 
-        // Инициализация
+        // Инициализация Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
         
-        // Получаем юзернейм
+        // Получаем данные пользователя из Telegram
         const user = tg.initDataUnsafe?.user;
         const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
 
@@ -129,7 +138,7 @@
         const emptyState = document.getElementById('empty-state');
 
         function loadInventory() {
-            // Слушаем изменения в реальном времени
+            // Путь в базе: users -> [твой юзернейм] -> inventory
             db.collection("users").doc(myUsername).collection("inventory")
             .onSnapshot((querySnapshot) => {
                 inventoryList.innerHTML = '';
@@ -148,11 +157,12 @@
                 querySnapshot.forEach((doc) => {
                     const item = doc.data();
                     count++;
+                    
                     const card = document.createElement('div');
                     card.className = 'nft-card';
                     card.innerHTML = `
                         <img src="${item.image || 'https://nft.fragment.com/gift/vintagecigar-7301.large.jpg'}" class="nft-image">
-                        <div class="text-[10px] text-zinc-500 font-bold uppercase mb-2 truncate px-1">${item.name || 'NFT Gift'}</div>
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase mb-2 truncate px-1">${item.name || 'NFT Gift'}</div>
                         <button onclick="showWithdrawError()" class="withdraw-btn">Вывести</button>
                     `;
                     inventoryList.appendChild(card);
@@ -161,6 +171,7 @@
                 itemCount.innerText = `${count} ITEMS`;
             }, (error) => {
                 console.error("Firebase Error: ", error);
+                inventoryList.innerHTML = '<div class="col-span-2 text-center py-20 text-red-500 font-bold text-xs uppercase">Ошибка базы данных</div>';
             });
         }
 
@@ -173,6 +184,8 @@
             document.getElementById('error-modal').style.display = 'none';
         }
 
+        // Настройка Telegram WebApp
+        tg.ready();
         tg.expand();
         loadInventory();
     </script>
