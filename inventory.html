@@ -76,7 +76,7 @@
     <div class="flex items-center mb-8 gap-4">
         <button onclick="location.href='cases.html'" class="text-zinc-400 text-3xl p-2 active:scale-75 transition-transform leading-none">←</button>
         <div class="flex-1">
-            <h1 class="text-2xl font-black italic tracking-tighter">INVENTORY</h1>
+            <h1 class="text-2xl font-black italic tracking-tighter uppercase">INVENTORY</h1>
         </div>
         <div id="item-count" class="bg-zinc-900 px-3 py-1 rounded-full text-xs text-zinc-400 font-bold whitespace-nowrap">0 ITEMS</div>
     </div>
@@ -106,20 +106,22 @@
     </div>
 
     <script>
+        // ОБНОВЛЕННЫЙ КОНФИГ
         const firebaseConfig = {
             apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg",
             authDomain: "majorinventory-df164.firebaseapp.com",
             projectId: "majorinventory-df164",
             storageBucket: "majorinventory-df164.firebasestorage.app",
             messagingSenderId: "603741122650",
-            appId: "1:603741122650:web:3cc1095804ebbe27b3e863",
-            measurementId: "G-2CPPJVVX73"
+            appId: "1:603741122650:web:35e730ab0448331eb3e863", // Изменено
+            measurementId: "G-7GS1M09F4T" // Изменено
         };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
         
+        // Автоматическое определение пользователя Telegram
         const user = tg.initDataUnsafe?.user;
         const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
 
@@ -128,6 +130,7 @@
         const emptyState = document.getElementById('empty-state');
 
         function loadInventory() {
+            // Слушаем изменения в коллекции: users -> [твой юзернейм] -> inventory
             db.collection("users").doc(myUsername).collection("inventory")
             .onSnapshot((querySnapshot) => {
                 inventoryList.innerHTML = '';
@@ -159,8 +162,8 @@
 
                 itemCount.innerText = `${count} ITEMS`;
             }, (error) => {
-                console.error("Error loading inventory: ", error);
-                inventoryList.innerHTML = '<div class="col-span-2 text-center py-20 text-red-500 font-bold text-xs uppercase">Ошибка доступа</div>';
+                console.error("Firebase Error: ", error);
+                inventoryList.innerHTML = '<div class="col-span-2 text-center py-20 text-red-500 font-bold text-xs uppercase">Ошибка доступа к базе</div>';
             });
         }
 
