@@ -3,16 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Ice Arena Zones</title>
+    <title>Ice Arena Global</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; }
-        .card-grad { background: linear-gradient(145deg, #111 0%, #050505 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; }
         
-        /* Арена с зонами */
+        .card-grad { 
+            background: linear-gradient(145deg, #111 0%, #050505 100%); 
+            border: 1px solid rgba(255,255,255,0.08); 
+            border-radius: 30px;
+        }
+
         #arena-container {
             position: relative;
             width: 100%;
@@ -21,81 +25,125 @@
             overflow: hidden;
             background: #050505;
             border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
+
         #zones-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-        
+
+        /* Надпись Ice Arena на льду */
+        .arena-logo {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0.15;
+        }
+        .arena-logo h2 {
+            font-size: 3rem;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+            color: white;
+            border: 4px solid white;
+            padding: 10px 20px;
+        }
+
         #ball {
             position: absolute;
-            width: 14px; height: 14px;
+            width: 18px; height: 18px;
             background: #fff; border-radius: 50%;
-            box-shadow: 0 0 15px #fff;
+            box-shadow: 0 0 20px #fff, 0 0 40px #3b82f6;
             z-index: 50; display: none;
             left: 0; top: 0;
         }
 
         .player-badge {
             display: flex; align-items: center; gap: 8px;
-            padding: 4px 10px; border-radius: 12px;
-            background: rgba(255,255,255,0.05);
-            font-size: 10px; font-weight: 800;
-            border: 1px solid rgba(255,255,255,0.1);
+            padding: 6px 12px; border-radius: 14px;
+            background: rgba(255,255,255,0.03);
+            font-size: 11px; font-weight: 800;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
         }
-        
+
         #win-modal {
             display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.95); backdrop-filter: blur(10px);
+            background: rgba(0,0,0,0.95); backdrop-filter: blur(15px);
             z-index: 200; align-items: center; justify-content: center;
         }
 
-        .active-btn { animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        .timer-box {
+            text-align: center;
+            background: rgba(255,255,255,0.03);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
     </style>
 </head>
 <body class="p-6">
 
-    <div class="flex items-center justify-between mb-4">
-        <button onclick="location.href='index.html'" class="text-blue-500 text-2xl">←</button>
-        <div id="timer-val" class="text-2xl font-black italic text-blue-500">00:20</div>
-        <div class="w-10"></div>
+    <div class="flex items-center justify-between mb-8">
+        <button onclick="location.href='index.html'" class="text-zinc-400 text-2xl p-2 active:scale-75 transition-transform">←</button>
+        <div class="timer-box">
+            <span class="text-zinc-500 text-[10px] uppercase font-black tracking-widest block mb-1">До начала</span>
+            <div id="timer-val" class="text-2xl font-black italic text-white tabular-nums">00:20</div>
+        </div>
+        <div class="w-12"></div>
+    </div>
+
+    <div id="arena-container" class="mb-6">
+        <canvas id="zones-canvas"></canvas>
+        <div class="arena-logo"><h2>Ice Arena</h2></div>
+        <div id="ball"></div>
     </div>
 
     <div class="flex justify-between items-center mb-6 px-2">
         <div>
-            <span class="text-zinc-500 text-[9px] uppercase font-bold tracking-widest block">Банк Арены</span>
-            <span id="total-bank" class="text-white font-black text-2xl">0</span>
+            <span class="text-zinc-500 text-[9px] uppercase font-bold tracking-widest block">Общий Банк</span>
+            <span id="total-bank" class="text-white font-black text-3xl">0</span>
         </div>
         <div class="text-right">
-            <span class="text-zinc-500 text-[9px] uppercase font-bold tracking-widest block">Твоя зона</span>
-            <span id="my-chance" class="text-blue-400 font-black text-2xl">0%</span>
+            <span class="text-zinc-500 text-[9px] uppercase font-bold tracking-widest block">Твой Шанс</span>
+            <span id="my-chance" class="text-blue-500 font-black text-3xl">0%</span>
         </div>
     </div>
 
-    <div id="arena-container" class="mb-6 shadow-2xl">
-        <canvas id="zones-canvas"></canvas>
-        <div id="ball"></div>
-    </div>
+    <div id="players-list" class="flex flex-wrap gap-2 mb-8 overflow-y-auto max-h-[80px]">
+        </div>
 
-    <div id="players-list" class="flex flex-wrap gap-2 mb-6 max-h-20 overflow-y-auto"></div>
-
-    <div class="card-grad p-4">
+    <div class="card-grad p-5">
         <div class="grid grid-cols-3 gap-3">
-            <button onclick="handleBet(100)" class="bg-zinc-900/50 border border-white/5 py-4 rounded-2xl font-black text-white active:scale-95 transition-all">100</button>
-            <button onclick="handleBet(250)" class="bg-zinc-900/50 border border-white/5 py-4 rounded-2xl font-black text-white active:scale-95 transition-all">250</button>
-            <button onclick="handleBet(500)" class="bg-blue-600 py-4 rounded-2xl font-black text-white active:scale-95 transition-all shadow-lg shadow-blue-600/20">500</button>
+            <button onclick="handleBet(100)" class="bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black text-zinc-300 active:scale-95 transition-all">100</button>
+            <button onclick="handleBet(250)" class="bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black text-zinc-300 active:scale-95 transition-all">250</button>
+            <button onclick="handleBet(500)" class="bg-blue-600 py-5 rounded-2xl font-black text-white active:scale-95 transition-all shadow-lg shadow-blue-600/30">500</button>
         </div>
     </div>
 
     <div id="win-modal">
-        <div class="card-grad p-8 text-center w-[85%] border-blue-500/30">
-            <img id="win-avatar" src="" class="w-20 h-20 rounded-full border-4 mx-auto mb-4">
-            <div id="win-name" class="text-xl font-bold mb-1">Username</div>
-            <div id="win-prize" class="text-3xl font-black text-blue-500 mb-2">+0 MJ</div>
+        <div class="card-grad p-10 text-center w-[85%] border-blue-500/30">
+            <div class="text-blue-500 text-[10px] font-black uppercase tracking-[0.3em] mb-6">Победитель</div>
+            <img id="win-avatar" src="" class="w-24 h-24 rounded-full border-4 mx-auto mb-4 shadow-2xl">
+            <div id="win-name" class="text-2xl font-bold mb-1">Username</div>
+            <div id="win-prize" class="text-4xl font-black text-white mb-2">0 MJ</div>
         </div>
     </div>
 
     <script>
-        // --- CONFIG & FIREBASE ---
-        const firebaseConfig = { /* Твой конфиг остается прежним */ };
+        // --- FIREBASE SETUP ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC48y52WCHeVqF8GB_YXHY-xGyCH3frhHU",
+            authDomain: "majorcrypto-28e9a.firebaseapp.com",
+            projectId: "majorcrypto-28e9a",
+            storageBucket: "majorcrypto-28e9a.firebasestorage.app",
+            messagingSenderId: "16272287356",
+            appId: "1:16272287356:web:2b5c9bafc7bfd85ef60bf9",
+            measurementId: "G-033CMJ0J70"
+        };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
@@ -105,7 +153,7 @@
         const arenaRef = db.collection("ice_arena").doc("current_session");
         const betsRef = db.collection("ice_arena_bets");
 
-        let playersData = {}; // {username: {amount, photo, color}}
+        let playersData = {};
         let isSpinning = false;
         const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
 
@@ -115,13 +163,19 @@
         function resizeCanvas() {
             canvas.width = canvas.offsetWidth;
             canvas.height = canvas.offsetHeight;
+            drawZones();
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // --- ЛОГИКА Отрисовки ЗОН ---
         function drawZones() {
             const total = Object.values(playersData).reduce((sum, p) => sum + p.amount, 0);
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.sqrt(Math.pow(canvas.width, 2) + Math.pow(canvas.height, 2));
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             if (total === 0) {
                 ctx.fillStyle = '#0a0a0a';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -129,10 +183,6 @@
             }
 
             let startAngle = 0;
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const radius = Math.sqrt(Math.pow(canvas.width, 2) + Math.pow(canvas.height, 2));
-
             Object.values(playersData).forEach(p => {
                 const sliceAngle = (p.amount / total) * 2 * Math.PI;
                 ctx.beginPath();
@@ -144,12 +194,14 @@
                 startAngle += sliceAngle;
             });
 
-            // Наложение эффекта льда
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            // Наложение ледяного градиента
+            const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, canvas.width/2);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+            ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // --- ЛОГИКА БАЛАНСА И СТАВОК ---
         async function handleBet(amount) {
             if (isSpinning) return;
             const userRef = db.collection("users").doc(myUsername);
@@ -172,10 +224,9 @@
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             }, {merge: true});
             
-            tg.HapticFeedback.impactOccurred('heavy');
+            tg.HapticFeedback.impactOccurred('medium');
         }
 
-        // --- СЛУШАТЕЛИ FIREBASE ---
         betsRef.onSnapshot(snap => {
             const list = document.getElementById('players-list');
             list.innerHTML = '';
@@ -184,19 +235,21 @@
 
             snap.forEach(d => {
                 const p = d.data();
-                if(!playersData[p.username]) playersData[p.username] = { ...p, color: colors[i % colors.length] };
-                else playersData[p.username].amount = p.amount;
-                
+                if(!playersData[p.username]) {
+                    playersData[p.username] = { ...p, color: colors[i % colors.length] };
+                } else {
+                    playersData[p.username].amount = p.amount;
+                }
                 totalBank += p.amount;
                 i++;
 
                 const badge = document.createElement('div');
                 badge.className = 'player-badge';
-                badge.style.borderColor = playersData[p.username].color;
+                badge.style.borderColor = playersData[p.username].color + '44';
                 badge.innerHTML = `
-                    <img src="${p.photo}" class="w-5 h-5 rounded-full">
+                    <img src="${p.photo}" class="w-4 h-4 rounded-full">
                     <span style="color:${playersData[p.username].color}">${p.username}</span>
-                    <span class="opacity-50">${p.amount} MJ</span>
+                    <span class="text-white/40 ml-1">${p.amount}</span>
                 `;
                 list.appendChild(badge);
             });
@@ -212,14 +265,16 @@
         arenaRef.onSnapshot(doc => {
             if (!doc.exists) return;
             const data = doc.data();
-            const timer = setInterval(() => {
+            const interval = setInterval(() => {
                 const diff = Math.max(0, Math.floor((data.endTime - Date.now()) / 1000));
                 document.getElementById('timer-val').innerText = `00:${diff < 10 ? '0'+diff : diff}`;
-                if (diff <= 0) { clearInterval(timer); if(!isSpinning) runCrazyBall(); }
+                if (diff <= 0) { 
+                    clearInterval(interval); 
+                    if(!isSpinning) runCrazyBall(); 
+                }
             }, 1000);
         });
 
-        // --- ФИЗИКА ШАРИКА ---
         function runCrazyBall() {
             isSpinning = true;
             const ball = document.getElementById('ball');
@@ -228,21 +283,21 @@
 
             let posX = arena.offsetWidth / 2;
             let posY = arena.offsetHeight / 2;
-            let velX = (Math.random() - 0.5) * 20;
-            let velY = (Math.random() - 0.5) * 20;
-            let friction = 0.99;
+            let velX = (Math.random() - 0.5) * 40; // Высокая начальная скорость
+            let velY = (Math.random() - 0.5) * 40;
+            let friction = 0.985;
 
             const move = setInterval(() => {
                 posX += velX;
                 posY += velY;
 
                 // Отскоки от стенок
-                if (posX <= 0 || posX >= arena.offsetWidth - 14) velX *= -1;
-                if (posY <= 0 || posY >= arena.offsetHeight - 14) velY *= -1;
+                if (posX <= 0 || posX >= arena.offsetWidth - 18) { velX *= -1; tg.HapticFeedback.impactOccurred('light'); }
+                if (posY <= 0 || posY >= arena.offsetHeight - 18) { velY *= -1; tg.HapticFeedback.impactOccurred('light'); }
 
-                // Случайные толчки (турбулентность)
-                velX += (Math.random() - 0.5) * 0.5;
-                velY += (Math.random() - 0.5) * 0.5;
+                // Рандомные микро-ускорения для "хаоса"
+                velX += (Math.random() - 0.5) * 0.8;
+                velY += (Math.random() - 0.5) * 0.8;
 
                 velX *= friction;
                 velY *= friction;
@@ -250,9 +305,9 @@
                 ball.style.left = posX + 'px';
                 ball.style.top = posY + 'px';
 
-                if (Math.abs(velX) + Math.abs(velY) < 0.2) {
+                if (Math.abs(velX) + Math.abs(velY) < 0.25) {
                     clearInterval(move);
-                    determineWinner(posX, posY);
+                    determineWinner(posX + 9, posY + 9);
                 }
             }, 16);
         }
@@ -260,14 +315,12 @@
         function determineWinner(finalX, finalY) {
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
-            
-            // Вычисляем угол, на котором остановился шарик
             let angle = Math.atan2(finalY - centerY, finalX - centerX);
             if (angle < 0) angle += 2 * Math.PI;
 
             const total = Object.values(playersData).reduce((sum, p) => sum + p.amount, 0);
             let currentAngle = 0;
-            let winner = null;
+            let winner = Object.values(playersData)[0];
 
             Object.values(playersData).forEach(p => {
                 const sliceAngle = (p.amount / total) * 2 * Math.PI;
@@ -277,17 +330,16 @@
                 currentAngle += sliceAngle;
             });
 
-            showWinner(winner || Object.values(playersData)[0]);
+            showWinner(winner);
         }
 
         function showWinner(winner) {
             const prize = Math.floor(parseInt(document.getElementById('total-bank').innerText) * 0.95);
-            const modal = document.getElementById('win-modal');
             document.getElementById('win-avatar').src = winner.photo;
             document.getElementById('win-avatar').style.borderColor = winner.color;
             document.getElementById('win-name').innerText = winner.username;
-            document.getElementById('win-prize').innerText = `+${prize} MJ`;
-            modal.style.display = 'flex';
+            document.getElementById('win-prize').innerText = `${prize} MJ`;
+            document.getElementById('win-modal').style.display = 'flex';
 
             tg.HapticFeedback.notificationOccurred('success');
 
@@ -297,7 +349,6 @@
                         balance: firebase.firestore.FieldValue.increment(prize)
                     });
                 }
-                // Очистка сессии (только для первого игрока в списке)
                 if (Object.keys(playersData)[0] === myUsername) {
                     await arenaRef.delete();
                     const snap = await betsRef.get();
@@ -307,6 +358,7 @@
             }, 4000);
         }
 
+        tg.ready();
         tg.expand();
     </script>
 </body>
