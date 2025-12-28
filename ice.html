@@ -108,7 +108,28 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // Загрузка рекорда
+        // Проверка зависшей сессии при старте
+        async function checkStuckSession() {
+            const snap = await arenaRef.get();
+            if (snap.exists) {
+                const data = snap.data();
+                // Если прошло более 60 секунд после окончания, а сессия еще висит - чистим
+                if (data.endTime && (Date.now() - data.endTime > 60000)) {
+                    await forceCleanDB();
+                }
+            }
+        }
+        checkStuckSession();
+
+        async function forceCleanDB() {
+            const bSnap = await betsRef.get();
+            const batch = db.batch();
+            bSnap.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            await arenaRef.delete();
+            location.reload();
+        }
+
         db.collection("ice_arena_history").orderBy("bank", "desc").limit(1).onSnapshot(s => {
             if(!s.empty) {
                 const d = s.docs[0].data();
@@ -185,7 +206,6 @@
             const data = doc.data();
             document.getElementById('round-num').innerText = `Раунд #${data.round}`;
             
-            // Если победитель уже в базе — показываем результат (честность: берем из БД)
             if (data.winner && !isSpinning && !isProcessed) { 
                 showResult(data.winner, data.totalBankAtEnd || 0); 
                 return; 
@@ -208,9 +228,8 @@
             document.querySelectorAll('.bet-btn').forEach(b => b.disabled = true);
             
             const players = Object.values(playersData);
-            
-            // ЧЕСТНОЕ ОПРЕДЕЛЕНИЕ: Только один (первый в списке) записывает результат в БД.
-            // Остальные ждут обновления из БД.
+            if (players.length === 0) return;
+
             if (players[0].username === myUsername) {
                 const total = players.reduce((s, p) => s + p.amount, 0);
                 const rand = Math.random() * total;
@@ -219,14 +238,12 @@
                     current += p.amount;
                     if (rand <= current) { winner = p; break; }
                 }
-                // Атомарная проверка: записываем только если победителя еще нет
                 await arenaRef.update({ 
                     winner: winner.username, 
                     totalBankAtEnd: total,
                     status: 'closed'
                 });
             }
-            
             runBallAnimation();
         }
 
@@ -247,7 +264,7 @@
                     clearInterval(move); 
                     arenaRef.get().then(snap => {
                         const data = snap.data();
-                        showResult(data.winner, data.totalBankAtEnd);
+                        if(data.winner) showResult(data.winner, data.totalBankAtEnd);
                     });
                 }
             }, 16);
@@ -265,25 +282,29 @@
             document.getElementById('win-prize').innerText = `${prize} MJ`;
             document.getElementById('win-modal').style.display = 'flex';
 
-            // Начисление выигрыша
             if (myUsername === winnerId) {
                 await db.collection("users").doc(myUsername).update({ 
                     balance: firebase.firestore.FieldValue.increment(prize) 
                 });
             }
 
-            // Очистка сессии (делает только хост)
+            // Очистка сессии и запись истории (делает только первый игрок)
             setTimeout(async () => {
-                if (Object.keys(playersData)[0] === myUsername) {
-                    await db.collection("ice_arena_history").add({ 
-                        winner: winnerId, displayName: winner.displayName, 
-                        photo: winner.photo, bank: prize, date: Date.now() 
-                    });
-                    const bSnap = await betsRef.get();
-                    const batch = db.batch();
-                    bSnap.forEach(d => batch.delete(d.ref));
-                    await batch.commit();
-                    await arenaRef.delete();
+                const players = Object.values(playersData);
+                if (players.length > 0 && players[0].username === myUsername) {
+                    try {
+                        await db.collection("ice_arena_history").add({ 
+                            winner: winnerId, displayName: winner.displayName, 
+                            photo: winner.photo, bank: prize, date: Date.now() 
+                        });
+                        // Атомарная очистка ставок
+                        const bSnap = await betsRef.get();
+                        const batch = db.batch();
+                        bSnap.forEach(d => batch.delete(d.ref));
+                        await batch.commit();
+                        // Удаление сессии
+                        await arenaRef.delete();
+                    } catch (e) { console.log(e); }
                 }
                 location.reload();
             }, 5000);
