@@ -34,9 +34,7 @@
             transition: transform 0.2s;
         }
 
-        .nft-card:active {
-            transform: scale(0.95);
-        }
+        .nft-card:active { transform: scale(0.95); }
 
         .nft-image {
             width: 100%;
@@ -106,22 +104,23 @@
     </div>
 
     <script>
-        // ОБНОВЛЕННЫЙ КОНФИГ
+        // ТВОЙ ОБНОВЛЕННЫЙ КОНФИГ ИЗ ПОСЛЕДНЕГО СООБЩЕНИЯ
         const firebaseConfig = {
             apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg",
             authDomain: "majorinventory-df164.firebaseapp.com",
             projectId: "majorinventory-df164",
             storageBucket: "majorinventory-df164.firebasestorage.app",
             messagingSenderId: "603741122650",
-            appId: "1:603741122650:web:35e730ab0448331eb3e863", // Изменено
-            measurementId: "G-7GS1M09F4T" // Изменено
+            appId: "1:603741122650:web:35e730ab0448331eb3e863",
+            measurementId: "G-7GS1M09F4T"
         };
 
+        // Инициализация
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
         
-        // Автоматическое определение пользователя Telegram
+        // Получаем юзернейм
         const user = tg.initDataUnsafe?.user;
         const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
 
@@ -130,7 +129,7 @@
         const emptyState = document.getElementById('empty-state');
 
         function loadInventory() {
-            // Слушаем изменения в коллекции: users -> [твой юзернейм] -> inventory
+            // Слушаем изменения в реальном времени
             db.collection("users").doc(myUsername).collection("inventory")
             .onSnapshot((querySnapshot) => {
                 inventoryList.innerHTML = '';
@@ -149,7 +148,6 @@
                 querySnapshot.forEach((doc) => {
                     const item = doc.data();
                     count++;
-                    
                     const card = document.createElement('div');
                     card.className = 'nft-card';
                     card.innerHTML = `
@@ -163,7 +161,6 @@
                 itemCount.innerText = `${count} ITEMS`;
             }, (error) => {
                 console.error("Firebase Error: ", error);
-                inventoryList.innerHTML = '<div class="col-span-2 text-center py-20 text-red-500 font-bold text-xs uppercase">Ошибка доступа к базе</div>';
             });
         }
 
