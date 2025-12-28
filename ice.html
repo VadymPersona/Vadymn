@@ -12,23 +12,16 @@
         body { background-color: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; }
         .card-grad { background: linear-gradient(145deg, #111 0%, #050505 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; }
         
-        /* Квадратная арена как была */
         #arena-container { 
-            position: relative; 
-            width: 100%; 
-            aspect-ratio: 1/1; 
-            border-radius: 40px; 
-            overflow: hidden; 
-            background: #050505; 
-            border: 2px solid rgba(255,255,255,0.1); 
+            position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 40px; 
+            overflow: hidden; background: #050505; border: 2px solid rgba(255,255,255,0.1); 
         }
         
         #zones-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
         
         .arena-logo { 
-            position: absolute; inset: 0; 
-            display: flex; align-items: center; justify-content: center; 
-            z-index: 5; pointer-events: none; opacity: 0.1; 
+            position: absolute; inset: 0; display: flex; align-items: center; 
+            justify-content: center; z-index: 5; pointer-events: none; opacity: 0.1; 
         }
         .arena-logo h2 { 
             font-size: 3rem; font-weight: 900; font-style: italic; 
@@ -36,25 +29,39 @@
         }
         
         #ball { 
-            position: absolute; width: 18px; height: 18px; 
-            background: #fff; border-radius: 50%; 
-            box-shadow: 0 0 20px #fff; z-index: 50; display: none; 
-            will-change: transform;
+            position: absolute; width: 18px; height: 18px; background: #fff; 
+            border-radius: 50%; box-shadow: 0 0 20px #fff; z-index: 50; display: none; 
         }
         
+        /* Табличка BIG WIN - Всегда справа сверху */
+        #big-win-toast {
+            position: absolute; top: 12px; right: 12px; z-index: 100;
+            background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 215, 0, 0.4);
+            padding: 6px 12px; border-radius: 16px; display: none; align-items: center; gap: 8px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1); animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
         .player-badge { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 14px; background: rgba(255,255,255,0.03); font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); }
         #win-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px); z-index: 200; align-items: center; justify-content: center; }
     </style>
 </head>
 <body class="p-6">
 
-    <div class="flex items-center justify-between mb-8">
+    <div id="big-win-toast">
+        <img id="bw-avatar" src="" class="w-9 h-9 rounded-full border-2 border-yellow-500">
+        <div>
+            <div class="text-[8px] text-yellow-500 font-black uppercase leading-none mb-1">Record Win!</div>
+            <div id="bw-info" class="text-[10px] font-bold text-white leading-tight">Name • 0 MJ</div>
+        </div>
+    </div>
+
+    <div class="flex items-center mb-8 gap-4">
         <button onclick="location.href='cases.html'" class="text-zinc-400 text-2xl p-2 active:scale-75 transition-transform">←</button>
         <div class="timer-box bg-zinc-900/50 p-3 rounded-2xl border border-white/5 text-center min-w-[100px]">
             <span id="round-num" class="text-blue-500 text-[10px] uppercase font-black block">Загрузка...</span>
             <div id="timer-val" class="text-xl font-black italic tabular-nums">00:00</div>
         </div>
-        <div class="w-12"></div>
     </div>
 
     <div id="arena-container" class="mb-6">
@@ -110,7 +117,7 @@
 
         let playersData = {};
         let isSpinning = false;
-        let animationTriggered = false; // Ключ против повторов
+        let animationTriggered = false;
         let imgObjects = {};
         let timerInterval = null;
         const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
@@ -119,37 +126,38 @@
         const ctx = canvas.getContext('2d');
         
         function resizeCanvas() {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
+            canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
             drawZones();
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
+        // BIG WIN: Берем рекордный выигрыш за ВСЕ ВРЕМЯ (сортировка по bank)
+        db.collection("ice_arena_history").orderBy("bank", "desc").limit(1).onSnapshot(s => {
+            if(!s.empty) {
+                const d = s.docs[0].data();
+                document.getElementById('bw-avatar').src = d.photo || `https://t.me/i/userpic/320/${d.winner}.jpg`;
+                document.getElementById('bw-info').innerText = `${d.displayName || d.winner} • ${d.bank} MJ`;
+                document.getElementById('big-win-toast').style.display = 'flex';
+            }
+        });
+
         function drawZones() {
             const players = Object.values(playersData);
             const total = players.reduce((sum, p) => sum + p.amount, 0);
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
+            const centerX = canvas.width / 2, centerY = canvas.height / 2;
             const radius = Math.sqrt(Math.pow(canvas.width, 2) + Math.pow(canvas.height, 2));
-
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (total === 0) { ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, canvas.width, canvas.height); return; }
-
             let startAngle = 0;
             players.forEach(p => {
                 const sliceAngle = (p.amount / total) * 2 * Math.PI;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
+                ctx.beginPath(); ctx.moveTo(centerX, centerY);
                 ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-                ctx.fillStyle = p.color;
-                ctx.fill();
-
+                ctx.fillStyle = p.color; ctx.fill();
                 const midAngle = startAngle + sliceAngle / 2;
                 const dist = canvas.width * 0.3;
-                const x = centerX + Math.cos(midAngle) * dist;
-                const y = centerY + Math.sin(midAngle) * dist;
-
+                const x = centerX + Math.cos(midAngle) * dist, y = centerY + Math.sin(midAngle) * dist;
                 ctx.save();
                 ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI * 2); ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fill();
                 if (imgObjects[p.photo]) {
@@ -168,7 +176,6 @@
             const userRef = db.collection("users").doc(myUsername);
             const doc = await userRef.get();
             if (!doc.exists || doc.data().balance < amount) { tg.showAlert("Недостаточно MJ!"); return; }
-
             await userRef.update({ balance: firebase.firestore.FieldValue.increment(-amount) });
             const arenaSnap = await arenaRef.get();
             if (!arenaSnap.exists) {
@@ -177,10 +184,8 @@
             } else {
                 await arenaRef.update({ totalBank: firebase.firestore.FieldValue.increment(amount) });
             }
-
             await betsRef.doc(myUsername).set({
-                username: myUsername,
-                displayName: myDisplayName,
+                username: myUsername, displayName: myDisplayName,
                 photo: user?.photo_url || `https://t.me/i/userpic/320/${myUsername}.jpg`,
                 amount: firebase.firestore.FieldValue.increment(amount)
             }, {merge: true});
@@ -193,18 +198,14 @@
             list.innerHTML = '';
             let totalBank = 0, i = 0;
             const newPlayers = {};
-
             snap.forEach(d => {
                 const p = d.data();
                 newPlayers[p.username] = { ...p, color: colors[i % colors.length] };
-                totalBank += p.amount;
-                i++;
+                totalBank += p.amount; i++;
                 const badge = document.createElement('div');
-                badge.className = 'player-badge';
-                badge.style.borderColor = newPlayers[p.username].color;
+                badge.className = 'player-badge'; badge.style.borderColor = newPlayers[p.username].color;
                 badge.innerHTML = `<img src="${p.photo}" class="w-4 h-4 rounded-full"><span style="color:${newPlayers[p.username].color}">${p.displayName}</span>`;
                 list.appendChild(badge);
-
                 if (!imgObjects[p.photo]) {
                     const img = new Image(); img.src = p.photo;
                     img.onload = () => { imgObjects[p.photo] = img; drawZones(); };
@@ -222,19 +223,22 @@
                 clearInterval(timerInterval);
                 document.getElementById('round-num').innerText = "Ожидание...";
                 document.getElementById('timer-val').innerText = "00:00";
-                animationTriggered = false; 
-                return;
+                animationTriggered = false; return;
             }
             const data = doc.data();
             document.getElementById('round-num').innerText = `Раунд #${data.round}`;
-            
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
                 const diff = Math.max(0, Math.floor((data.endTime - Date.now()) / 1000));
                 document.getElementById('timer-val').innerText = `00:${diff < 10 ? '0'+diff : diff}`;
-                
-                // Запуск анимации только если время вышло и она еще не запускалась в этом раунде
-                if (diff <= 0 && !animationTriggered) { 
+                if (diff <= 0 && !animationTriggered) {
+                    if (Object.keys(playersData).length < 2) {
+                        if (Object.keys(playersData)[0] === myUsername) {
+                            arenaRef.update({ endTime: Date.now() + 20000 });
+                            tg.showAlert("Нужно минимум 2 игрока!");
+                        }
+                        return;
+                    }
                     clearInterval(timerInterval); 
                     animationTriggered = true; 
                     runCrazyBall(); 
@@ -243,34 +247,25 @@
         });
 
         function runCrazyBall() {
-            if (Object.keys(playersData).length === 0) { isSpinning = false; animationTriggered = false; return; }
             isSpinning = true;
             document.querySelectorAll('.bet-btn').forEach(b => b.disabled = true);
             const ball = document.getElementById('ball');
             const arena = document.getElementById('arena-container');
             ball.style.display = 'block';
-
             let px = arena.offsetWidth / 2, py = arena.offsetHeight / 2;
             let vx = (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random() * 10);
             let vy = (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random() * 10);
             const friction = 0.988;
-
             const move = setInterval(() => {
                 px += vx; py += vy;
-
-                // Исправленная физика отскока (без прилипания)
                 if (px <= 5) { px = 5; vx *= -1; tg.HapticFeedback.impactOccurred('light'); }
                 if (px >= arena.offsetWidth - 23) { px = arena.offsetWidth - 23; vx *= -1; tg.HapticFeedback.impactOccurred('light'); }
                 if (py <= 5) { py = 5; vy *= -1; tg.HapticFeedback.impactOccurred('light'); }
                 if (py >= arena.offsetHeight - 23) { py = arena.offsetHeight - 23; vy *= -1; tg.HapticFeedback.impactOccurred('light'); }
-
                 vx *= friction; vy *= friction;
-                ball.style.left = px + 'px';
-                ball.style.top = py + 'px';
-
+                ball.style.left = px + 'px'; ball.style.top = py + 'px';
                 if (Math.abs(vx) + Math.abs(vy) < 0.5) {
-                    clearInterval(move);
-                    determineWinner(px + 9, py + 9);
+                    clearInterval(move); determineWinner(px + 9, py + 9);
                 }
             }, 16);
         }
@@ -279,42 +274,37 @@
             const centerX = canvas.width / 2, centerY = canvas.height / 2;
             let angle = Math.atan2(fy - centerY, fx - centerX);
             if (angle < 0) angle += 2 * Math.PI;
-
             const players = Object.values(playersData);
             const total = players.reduce((sum, p) => sum + p.amount, 0);
             let curA = 0, winner = players[0];
-
             players.forEach(p => {
                 const slice = (p.amount / total) * 2 * Math.PI;
                 if (angle >= curA && angle <= curA + slice) winner = p;
                 curA += slice;
             });
-
             const prize = Math.floor(total * 0.95);
             document.getElementById('win-avatar').src = winner.photo;
             document.getElementById('win-name').innerText = winner.displayName;
             document.getElementById('win-prize').innerText = `${prize} MJ`;
             document.getElementById('win-modal').style.display = 'flex';
             tg.HapticFeedback.notificationOccurred('success');
-
             setTimeout(async () => {
                 if (myUsername === winner.username) {
                     await db.collection("users").doc(myUsername).update({ balance: firebase.firestore.FieldValue.increment(prize) });
                 }
                 if (Object.keys(playersData)[0] === myUsername) {
-                    await db.collection("ice_arena_history").add({ winner: winner.username, bank: total, date: Date.now() });
+                    await db.collection("ice_arena_history").add({ 
+                        winner: winner.username, displayName: winner.displayName, 
+                        photo: winner.photo, bank: prize, date: Date.now() 
+                    });
                     await arenaRef.delete();
                     const snap = await betsRef.get();
-                    const batch = db.batch();
-                    snap.forEach(d => batch.delete(d.ref));
-                    await batch.commit();
+                    const batch = db.batch(); snap.forEach(d => batch.delete(d.ref)); await batch.commit();
                 }
                 location.reload(); 
             }, 5000);
         }
-
-        tg.ready();
-        tg.expand();
+        tg.ready(); tg.expand();
     </script>
 </body>
 </html>
