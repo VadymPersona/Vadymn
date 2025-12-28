@@ -24,7 +24,7 @@
 <body>
 
     <div class="flex items-center mb-8 gap-4">
-        <button onclick="history.back()" class="text-zinc-400 text-3xl p-2 active:scale-75 transition-transform">←</button>
+        <button onclick="location.href='ice.html'" class="text-zinc-400 text-3xl p-2 active:scale-75 transition-transform">←</button>
         <div class="flex-1">
             <h1 class="text-xl font-black italic tracking-tighter uppercase">Выберите подарки</h1>
         </div>
@@ -64,8 +64,12 @@
         const user = tg.initDataUnsafe?.user;
         const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
 
-        // Цены в MJ
-        const prices = { "Scared Cat": 375000, "Vintage Cigar": 150000 };
+        // Цены в MJ (при необходимости добавьте другие предметы сюда)
+        const prices = { 
+            "Scared Cat": 375000, 
+            "Vintage Cigar": 150000 
+        };
+        
         let selectedItems = [];
 
         function loadInventory() {
@@ -73,6 +77,10 @@
             .onSnapshot((snap) => {
                 const list = document.getElementById('inventory-list');
                 list.innerHTML = '';
+                if(snap.empty) {
+                    list.innerHTML = '<div class="col-span-2 text-center text-zinc-500 py-10">У вас нет подарков</div>';
+                    return;
+                }
                 snap.forEach((doc) => {
                     const item = doc.data();
                     const price = prices[item.name] || 10000;
@@ -84,7 +92,7 @@
                         <div class="check-mark">✓</div>
                         <img src="${item.image}" class="nft-image">
                         <div class="text-[10px] font-bold uppercase truncate">${item.name}</div>
-                        <div class="text-blue-500 text-[10px] font-black">${price} MJ</div>
+                        <div class="text-blue-500 text-[10px] font-black">${price.toLocaleString()} MJ</div>
                     `;
                     list.appendChild(card);
                 });
@@ -103,13 +111,15 @@
             }
             const totalMJ = selectedItems.reduce((s, i) => s + i.price, 0);
             document.getElementById('deposit-btn').disabled = selectedItems.length === 0;
-            document.getElementById('deposit-btn').innerText = `СТАВКА: ${totalMJ} MJ (${selectedItems.length})`;
+            document.getElementById('deposit-btn').innerText = `СТАВКА: ${totalMJ.toLocaleString()} MJ (${selectedItems.length})`;
             if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         }
 
         async function confirmDeposit() {
             const totalMJ = selectedItems.reduce((s, i) => s + i.price, 0);
-            if (!confirm(`Вы ставите ${selectedItems.length} подарков на сумму ${totalMJ} MJ?`)) return;
+            
+            // Запрашиваем подтверждение через Telegram UI или обычный confirm
+            if (!confirm(`Вы ставите ${selectedItems.length} подарков на сумму ${totalMJ.toLocaleString()} MJ?`)) return;
 
             const btn = document.getElementById('deposit-btn');
             btn.disabled = true;
@@ -117,28 +127,42 @@
 
             try {
                 // 1. Создаем запись о ставке в базе АРЕНЫ
-                // Добавляем массив itemsData, чтобы при выигрыше база знала, что возвращать
+                // stakedItems сохраняется в массив объектов для корректного отображения иконок
                 await dbArena.collection("ice_arena_bets").doc(myUsername).set({
                     username: myUsername,
                     displayName: user?.first_name || myUsername,
                     photo: user?.photo_url || `https://t.me/i/userpic/320/${myUsername}.jpg`,
                     amount: firebase.firestore.FieldValue.increment(totalMJ),
                     isNft: true,
-                    stakedItems: selectedItems.map(i => ({name: i.name, image: i.image})) 
+                    stakedItems: selectedItems.map(i => ({
+                        name: i.name, 
+                        image: i.image
+                    })) 
                 }, {merge: true});
 
-                // 2. Удаляем из базы ИНВЕНТАРЯ
+                // 2. Удаляем из базы ИНВЕНТАРЯ (Batch транзакция)
                 const batch = dbInv.batch();
                 selectedItems.forEach(item => {
-                    batch.delete(dbInv.collection("users").doc(myUsername).collection("inventory").doc(item.id));
+                    const docRef = dbInv.collection("users").doc(myUsername).collection("inventory").doc(item.id);
+                    batch.delete(docRef);
                 });
                 await batch.commit();
 
-                tg.showAlert("Успешно! Предметы на кону.");
-                location.href = 'arena.html';
+                // 3. Уведомление и ПЕРЕХОД НА ICE.HTML
+                if(tg.showAlert) {
+                    tg.showAlert("Успешно! Предметы на кону.", () => {
+                        location.href = 'ice.html';
+                    });
+                } else {
+                    alert("Успешно!");
+                    location.href = 'ice.html';
+                }
+
             } catch (e) {
-                alert("Ошибка: " + e.message);
+                console.error(e);
+                alert("Ошибка при депозите: " + e.message);
                 btn.disabled = false;
+                btn.innerText = "ПОПРОБОВАТЬ СНОВА";
             }
         }
 
