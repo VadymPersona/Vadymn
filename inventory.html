@@ -2,24 +2,118 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Firebase Setup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Мой Инвентарь</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #000; color: #00ff00; font-family: monospace; padding: 20px; }
-        .log { border: 1px solid #333; padding: 10px; height: 300px; overflow-y: auto; background: #050505; }
-        button { background: #00ff00; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        body {
+            background-color: #000;
+            color: white;
+            font-family: -apple-system, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .nft-card {
+            background: linear-gradient(145deg, #111 0%, #050505 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.2s ease;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nft-card:active {
+            transform: scale(0.95);
+        }
+
+        .nft-image {
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 20px;
+            object-fit: cover;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .withdraw-btn {
+            background: #3b82f6;
+            color: white;
+            width: 100%;
+            padding: 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        #error-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
-    <h2>Генератор структуры БД</h2>
-    <p>Нажми кнопку, чтобы создать коллекции для своего аккаунта:</p>
-    <button onclick="setupDatabase()">СОЗДАТЬ СТРУКТУРУ</button>
-    
-    <div class="log" id="log"></div>
+
+    <div class="flex items-center mb-8 gap-4">
+        <button onclick="location.href='cases.html'" class="text-zinc-400 text-3xl p-2 active:scale-75 transition-transform leading-none">←</button>
+        <div class="flex-1">
+            <h1 class="text-2xl font-black italic tracking-tighter uppercase">INVENTORY</h1>
+        </div>
+        <div id="item-count" class="bg-zinc-900 px-3 py-1 rounded-full text-xs text-zinc-400 font-bold whitespace-nowrap uppercase">0 Items</div>
+    </div>
+
+    <div id="inventory-list" class="inventory-grid">
+        <div class="col-span-2 text-center py-20 text-zinc-600 font-bold text-sm animate-pulse" id="loader">
+            ЗАГРУЗКА ИНВЕНТАРЯ...
+        </div>
+    </div>
+
+    <div id="empty-state" class="hidden flex flex-col items-center justify-center py-32">
+        <h2 class="text-zinc-500 font-black uppercase tracking-[0.3em] text-2xl">ПУСТО</h2>
+        <p class="text-zinc-600 text-sm mt-2 font-medium">У вас пока нет предметов</p>
+    </div>
+
+    <div id="error-modal">
+        <div class="bg-zinc-900 border border-white/10 p-8 rounded-[30px] text-center max-w-xs">
+            <div class="text-red-500 text-4xl mb-4">⚠️</div>
+            <h2 class="text-lg font-bold mb-2">Ошибка вывода</h2>
+            <p class="text-zinc-400 text-sm leading-relaxed mb-6">
+                Вывод недоступен в данный момент в связи с ошибками передачи подарков.
+            </p>
+            <button onclick="closeModal()" class="w-full bg-white text-black font-black py-3 px-8 rounded-xl uppercase text-xs active:scale-95 transition-transform">
+                Понятно
+            </button>
+        </div>
+    </div>
 
     <script>
+        // ТВОЙ АКТУАЛЬНЫЙ КОНФИГ FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg",
             authDomain: "majorinventory-df164.firebaseapp.com",
@@ -30,43 +124,70 @@
             measurementId: "G-7GS1M09F4T"
         };
 
+        // Инициализация Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
+        
+        // Получаем данные пользователя из Telegram
+        const user = tg.initDataUnsafe?.user;
+        const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
 
-        function log(msg) {
-            const l = document.getElementById('log');
-            l.innerHTML += `> ${msg}<br>`;
-        }
+        const inventoryList = document.getElementById('inventory-list');
+        const itemCount = document.getElementById('item-count');
+        const emptyState = document.getElementById('empty-state');
 
-        async function setupDatabase() {
-            // Определяем юзернейм
-            const user = tg.initDataUnsafe?.user;
-            const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
+        function loadInventory() {
+            // Путь в базе: users -> [твой юзернейм] -> inventory
+            db.collection("users").doc(myUsername).collection("inventory")
+            .onSnapshot((querySnapshot) => {
+                inventoryList.innerHTML = '';
+                let count = 0;
 
-            log(`Инициализация для пользователя: <b>${myUsername}</b>`);
+                if (querySnapshot.empty) {
+                    itemCount.innerText = `0 ITEMS`;
+                    emptyState.classList.remove('hidden');
+                    inventoryList.classList.add('hidden');
+                    return;
+                }
 
-            try {
-                // 1. Создаем ссылку на коллекцию инвентаря
-                const invRef = db.collection("users").doc(myUsername).collection("inventory");
+                emptyState.classList.add('hidden');
+                inventoryList.classList.remove('hidden');
 
-                // 2. Добавляем тестовый предмет
-                log("Добавление тестового NFT...");
-                await invRef.add({
-                    name: "Vintage Cigar",
-                    image: "https://nft.fragment.com/gift/vintagecigar-7301.large.jpg",
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                querySnapshot.forEach((doc) => {
+                    const item = doc.data();
+                    count++;
+                    
+                    const card = document.createElement('div');
+                    card.className = 'nft-card';
+                    card.innerHTML = `
+                        <img src="${item.image || 'https://nft.fragment.com/gift/vintagecigar-7301.large.jpg'}" class="nft-image">
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase mb-2 truncate px-1">${item.name || 'NFT Gift'}</div>
+                        <button onclick="showWithdrawError()" class="withdraw-btn">Вывести</button>
+                    `;
+                    inventoryList.appendChild(card);
                 });
 
-                log("<span style='color:white'>✅ УСПЕХ!</span>");
-                log("Структура создана: users -> " + myUsername + " -> inventory -> item");
-                log("Теперь можешь открывать inventory.html");
-
-            } catch (e) {
-                log("<span style='color:red'>❌ ОШИБКА:</span> " + e.message);
-                console.error(e);
-            }
+                itemCount.innerText = `${count} ITEMS`;
+            }, (error) => {
+                console.error("Firebase Error: ", error);
+                inventoryList.innerHTML = '<div class="col-span-2 text-center py-20 text-red-500 font-bold text-xs uppercase">Ошибка базы данных</div>';
+            });
         }
+
+        function showWithdrawError() {
+            document.getElementById('error-modal').style.display = 'flex';
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        function closeModal() {
+            document.getElementById('error-modal').style.display = 'none';
+        }
+
+        // Настройка Telegram WebApp
+        tg.ready();
+        tg.expand();
+        loadInventory();
     </script>
 </body>
 </html>
