@@ -10,39 +10,61 @@
         body { 
             background-color: #000; color: white; 
             font-family: -apple-system, sans-serif;
-            padding-bottom: 100px;
-            overflow-x: hidden;
+            overflow: hidden; /* Отключаем общий скролл, чтобы работал внутренний */
+            height: 100vh;
         }
+
+        /* --- КОНТЕЙНЕР ДЛЯ ВЕРТИКАЛЬНОГО СКРОЛЛА --- */
+        .scroll-wrapper {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory; /* Включает эффект прилипания */
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding-top: 130px; /* Отступ под фиксированную шапку */
+            padding-bottom: 120px; /* Отступ под навигацию */
+        }
+        .scroll-wrapper::-webkit-scrollbar { display: none; }
+
+        .snap-item {
+            scroll-snap-align: center; /* Центрирует карточку при остановке */
+            min-height: 70vh; /* Высота области скролла для каждой карточки */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
         .case-card {
+            width: 100%;
+            height: 100%;
+            max-height: 500px;
             background: linear-gradient(180deg, #0f0f0f 0%, #050505 100%);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
-        .case-card:active { transform: scale(0.96); opacity: 0.8; }
+        
+        .case-card:active { transform: scale(0.96); opacity: 0.9; }
         
         /* Стили блокировки */
         .case-card.locked {
-            opacity: 0.6;
-            filter: grayscale(0.8);
+            opacity: 0.5;
+            filter: grayscale(1);
             pointer-events: none;
-            border-color: rgba(255, 255, 255, 0.02);
         }
         
-        .glow-blue {
-            box-shadow: 0 0 20px rgba(0, 122, 255, 0.1);
-            border-color: rgba(0, 122, 255, 0.2);
-        }
-        
-        .glow-red {
-            box-shadow: 0 0 25px rgba(255, 50, 50, 0.15);
-            border-color: rgba(255, 50, 50, 0.3);
-            background: linear-gradient(180deg, #1a0505 0%, #050505 100%);
-        }
+        /* Свечения */
+        .glow-blue { box-shadow: 0 0 40px rgba(0, 122, 255, 0.15); border-color: rgba(0, 122, 255, 0.2); }
+        .glow-red { box-shadow: 0 0 40px rgba(255, 50, 50, 0.2); border-color: rgba(255, 50, 50, 0.3); }
+        .glow-ice { box-shadow: 0 0 40px rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.15); }
 
-        .case-img { object-fit: contain; }
-        .blue-shadow { filter: drop-shadow(0 0 15px rgba(0, 122, 255, 0.4)); }
-        .red-shadow { filter: drop-shadow(0 0 15px rgba(255, 50, 50, 0.4)); }
+        .ice-shadow { filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.4)); }
+        .blue-shadow { filter: drop-shadow(0 0 20px rgba(0, 122, 255, 0.4)); }
+        .red-shadow { filter: drop-shadow(0 0 20px rgba(255, 50, 50, 0.4)); }
 
         .nav-blur {
             background: rgba(10, 10, 10, 0.8);
@@ -50,12 +72,11 @@
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* Стиль ленты Drops */
+        /* Лента Drops */
         .feed-container {
             display: flex;
             overflow-x: auto;
             gap: 12px;
-            padding: 4px 0;
             scrollbar-width: none;
         }
         .feed-container::-webkit-scrollbar { display: none; }
@@ -76,47 +97,87 @@
             from { opacity: 0; transform: translateX(30px); }
             to { opacity: 1; transform: translateX(0); }
         }
+
+        @keyframes spin-snow {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+        .animate-snowflake { animation: spin-snow 10s linear infinite; }
     </style>
 </head>
-<body class="p-6">
+<body>
 
-    <div class="mb-6 flex justify-between items-end">
-        <div>
-            <h1 class="text-3xl font-black italic tracking-tighter uppercase text-white">Кейсы</h1>
-            <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Live Drops</p>
+    <div class="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-lg p-6 pb-2">
+        <div class="mb-4 flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl font-black italic tracking-tighter uppercase text-white">Кейсы</h1>
+                <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Live Drops</p>
+            </div>
+            <div class="flex items-center gap-1.5 mb-1">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="text-[9px] text-green-500 font-black uppercase">Online</span>
+            </div>
         </div>
-        <div class="flex items-center gap-1.5 mb-1">
-            <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-            <span class="text-[9px] text-green-500 font-black uppercase">Online</span>
-        </div>
+        <div id="live-feed" class="feed-container"></div>
     </div>
 
-    <div id="live-feed" class="feed-container mb-10">
-        </div>
-
-    <div class="grid grid-cols-1 gap-4">
+    <div class="scroll-wrapper">
         
-        <div onclick="window.location.href='case_open.html'" class="case-card glow-blue rounded-[35px] p-6 flex items-center justify-between relative overflow-hidden">
-            <div class="z-10">
-                <h2 class="text-xl font-black italic uppercase leading-none mb-1 text-white">Все или<br>Ничего</h2>
-                <p class="text-[10px] text-blue-500 font-bold uppercase tracking-tighter mb-4">Открытие каждые 5 мин</p>
-                <div class="flex items-center gap-2 bg-white/5 w-fit px-3 py-1.5 rounded-full border border-white/5">
-                    <span class="text-xs font-bold text-white">0</span>
-                    <span class="text-sm">⭐</span>
+        <div class="snap-item">
+            <div onclick="window.location.href='ice.html'" class="case-card glow-ice rounded-[45px] p-8 relative overflow-hidden">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <h2 class="text-2xl font-black italic uppercase leading-none text-white">Ice Arena</h2>
+                        <span class="bg-blue-600 text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-tighter shadow-lg shadow-blue-500/40">NEW</span>
+                    </div>
+                    <p class="text-xs text-zinc-400 font-bold uppercase tracking-tighter">Битва за MJ в реальном времени</p>
+                </div>
+                
+                <div class="flex justify-center items-center py-6 animate-snowflake ice-shadow">
+                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2V22M12 2L15 5M12 2L9 5M12 22L15 19M12 22L9 19M22 12H2M22 12L19 15M22 12L19 9M2 12L5 15M2 12L5 9M19.07 19.07L4.93 4.93M19.07 19.07L19.07 15.54M19.07 19.07L15.54 19.07M4.93 4.93L4.93 8.46M4.93 4.93L8.46 4.93M19.07 4.93L4.93 19.07M19.07 4.93L15.54 4.93M19.07 4.93L19.07 8.46M4.93 19.07L8.46 19.07M4.93 19.07L4.93 15.54" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+
+                <div class="flex items-center justify-center gap-2 bg-white/10 w-full py-4 rounded-2xl border border-white/10">
+                    <span class="text-sm font-black text-blue-400 uppercase tracking-widest">Играть</span>
                 </div>
             </div>
-            <img src="case.png" class="w-28 h-28 case-img blue-shadow relative z-10" onerror="this.src='https://giftsbattle.com/cases/Porsche_911'">
         </div>
 
-        <div id="daily-card" onclick="openDaily()" class="case-card glow-red rounded-[35px] p-6 flex items-center justify-between relative overflow-hidden">
-            <div class="z-10">
-                <h2 class="text-xl font-black italic uppercase leading-none mb-1 text-red-500">Ежедневный<br>Кейс</h2>
-                <p id="daily-status" class="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter mb-4">Проверка...</p>
-                <div id="daily-badge" class="flex items-center gap-2 bg-red-500/20 w-fit px-3 py-1.5 rounded-full border border-red-500/20">
-                    <span class="text-[10px] font-black text-red-500 uppercase">FREE</span>
+        <div class="snap-item">
+            <div onclick="window.location.href='case_open.html'" class="case-card glow-blue rounded-[45px] p-8 relative overflow-hidden">
+                <div>
+                    <h2 class="text-2xl font-black italic uppercase leading-none mb-2 text-white">Все или<br>Ничего</h2>
+                    <p class="text-xs text-blue-500 font-bold uppercase tracking-tighter">Открытие каждые 5 мин</p>
+                </div>
+                
+                <div class="flex justify-center items-center py-6 blue-shadow">
+                    <img src="case.png" class="w-36 h-36 object-contain" onerror="this.src='https://giftsbattle.com/cases/Porsche_911'">
+                </div>
+
+                <div class="flex items-center justify-center gap-2 bg-white/5 w-full py-4 rounded-2xl border border-white/5">
+                    <span class="text-lg font-bold text-white">0 ⭐</span>
                 </div>
             </div>
-            <img src="free.png" class="w-28 h-28 case-img red-shadow relative z-10" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2854/2854580.png'">
+        </div>
+
+        <div class="snap-item">
+            <div id="daily-card" onclick="openDaily()" class="case-card glow-red rounded-[45px] p-8 relative overflow-hidden">
+                <div>
+                    <h2 class="text-2xl font-black italic uppercase leading-none mb-2 text-red-500">Daily Free</h2>
+                    <p id="daily-status" class="text-xs text-zinc-400 font-bold uppercase tracking-tighter">Проверка...</p>
+                </div>
+                
+                <div class="flex justify-center items-center py-6 red-shadow">
+                    <img src="free.png" class="w-36 h-36 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2854/2854580.png'">
+                </div>
+
+                <div id="daily-badge" class="flex items-center justify-center gap-2 bg-red-500/20 w-full py-4 rounded-2xl border border-red-500/20">
+                    <span class="text-sm font-black text-red-500 uppercase tracking-widest">Открыть</span>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -147,70 +208,23 @@
             { img: 'https://nft.fragment.com/gift/instantramen-6790.large.jpg', link: 'https://t.me/nft/InstantRamen-6790' }
         ];
 
-        // --- ЛОГИКА СОХРАНЕНИЯ ЛЕНТЫ ---
-        
-        function loadFeedHistory() {
-            const history = JSON.parse(localStorage.getItem('drops_history') || '[]');
-            feed.innerHTML = '';
-            // Рендерим от старых к новым (prepend в DOM сделает правильный порядок)
-            history.reverse().forEach(drop => renderDrop(drop, false));
-        }
-
-        function saveDropToHistory(dropData) {
-            let history = JSON.parse(localStorage.getItem('drops_history') || '[]');
-            history.unshift(dropData);
-            if (history.length > 15) history.pop();
-            localStorage.setItem('drops_history', JSON.stringify(history));
-        }
-
         function renderDrop(data, animate = true) {
             const item = document.createElement('div');
             item.className = 'feed-item';
             if (!animate) item.style.animation = 'none';
-            
-            let prizeHtml = '';
-            if (data.type === 'nft') {
-                prizeHtml = `<a href="${data.link}" target="_blank"><img src="${data.img}" class="w-8 h-8 rounded-lg border border-red-500/30 shadow-lg shadow-red-500/10"></a>`;
-            } else if (data.type === 'star') {
-                prizeHtml = `<div class="flex items-center gap-1 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20"><span class="text-[10px] font-black text-yellow-500">${data.val}⭐</span></div>`;
-            } else {
-                prizeHtml = `<span class="text-[10px] font-bold text-zinc-600 uppercase">💨 Пусто</span>`;
-            }
+            let prizeHtml = data.type === 'nft' 
+                ? `<a href="${data.link}"><img src="${data.img}" class="w-8 h-8 rounded-lg border border-red-500/30"></a>`
+                : `<div class="bg-yellow-500/10 px-2 py-0.5 rounded-full"><span class="text-[10px] font-black text-yellow-500">${data.val}⭐</span></div>`;
 
-            item.innerHTML = `
-                <img src="https://ui-avatars.com/api/?name=${data.user.replace('@','')}&background=random" class="w-7 h-7 rounded-full border border-white/10">
-                <div class="flex flex-col">
-                    <span class="text-[9px] font-bold text-zinc-400 leading-none mb-1">${data.user}</span>
-                    ${prizeHtml}
-                </div>
-            `;
+            item.innerHTML = `<img src="https://ui-avatars.com/api/?name=${data.user.replace('@','')}&background=random" class="w-7 h-7 rounded-full border border-white/10">
+                <div class="flex flex-col"><span class="text-[9px] font-bold text-zinc-400 leading-none mb-1">${data.user}</span>${prizeHtml}</div>`;
             feed.prepend(item);
         }
 
-        function pushDrop(user, type, val, img = null, link = null) {
-            const dropData = { user, type, val, img, link, time: Date.now() };
-            renderDrop(dropData, true);
-            saveDropToHistory(dropData);
-            if (feed.children.length > 15) feed.removeChild(feed.lastChild);
-        }
-
-        // --- ЦИКЛЫ И ПРОВЕРКИ ---
-
         function personovichCycle() {
             const nft = NFTS[Math.floor(Math.random() * NFTS.length)];
-            pushDrop('@personovich', 'nft', null, nft.img, nft.link);
-            const nextDrop = Math.floor(Math.random() * (240000 - 120000 + 1) + 120000);
-            setTimeout(personovichCycle, nextDrop);
-        }
-
-        function checkMyDrop() {
-            const myDrop = sessionStorage.getItem('last_drop');
-            if (myDrop) {
-                const data = JSON.parse(myDrop);
-                const myName = tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || "Me";
-                pushDrop(`@${myName}`, data.type, data.val);
-                sessionStorage.removeItem('last_drop');
-            }
+            renderDrop({ user: '@personovich', type: 'nft', img: nft.img, link: nft.link });
+            setTimeout(personovichCycle, Math.random() * (240000 - 120000) + 120000);
         }
 
         function updateDailyCooldown() {
@@ -221,10 +235,8 @@
                 const diff = Date.now() - parseInt(lastOpen);
                 if (diff < COOLDOWN_TIME) {
                     card.classList.add('locked');
-                    const remaining = COOLDOWN_TIME - diff;
-                    const h = Math.floor(remaining / 3600000);
-                    const m = Math.floor((remaining % 3600000) / 60000);
-                    status.innerText = `Доступно через ${h}ч ${m}м`;
+                    const rem = COOLDOWN_TIME - diff;
+                    status.innerText = `${Math.floor(rem/3600000)}ч ${Math.floor((rem%3600000)/60000)}м`;
                     return;
                 }
             }
@@ -237,19 +249,8 @@
             window.location.href = 'free_case.html';
         }
 
-        // Инициализация
-        loadFeedHistory();
-        checkMyDrop();
         updateDailyCooldown();
-        
-        // Запуск цикла персонажа если история пуста
-        const history = JSON.parse(localStorage.getItem('drops_history') || '[]');
-        if (history.length === 0) {
-            personovichCycle(); 
-        } else {
-            setTimeout(personovichCycle, 120000);
-        }
-
+        personovichCycle();
         setInterval(updateDailyCooldown, 60000);
         tg.ready();
         tg.expand();
