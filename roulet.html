@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Major Raffle - Launch</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body { background-color: #000; color: white; font-family: -apple-system, sans-serif; overflow-x: hidden; }
+        
+        .main-title { font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; }
+
+        /* --- КРУТОЙ CSS 3D ДЖОЙСТИК (БЕЗ КАРТИНОК) --- */
+        .joystick-3d-box {
+            position: relative;
+            width: 140px;
+            height: 80px;
+            background: linear-gradient(145deg, #2563eb, #1e3a8a);
+            border-radius: 20px 20px 40px 40px;
+            box-shadow: 
+                0 15px 0 #1e3a8a, 
+                0 25px 50px rgba(37, 99, 235, 0.4);
+            animation: float-extreme 4s ease-in-out infinite;
+        }
+
+        .joystick-3d-box::before, .joystick-3d-box::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            width: 50px;
+            height: 70px;
+            background: #1e40af;
+            border-radius: 20px;
+            box-shadow: 0 10px 0 #1e3a8a;
+        }
+        .joystick-3d-box::before { left: -10px; transform: rotate(20deg); }
+        .joystick-3d-box::after { right: -10px; transform: rotate(-20deg); }
+
+        .button-group {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .btn-dot { width: 12px; height: 12px; background: #60a5fa; border-radius: 50%; box-shadow: inset 0 -2px 4px rgba(0,0,0,0.5); }
+        
+        .d-pad {
+            position: absolute;
+            top: 25px;
+            left: 20px;
+            width: 30px;
+            height: 30px;
+            background: #1d4ed8;
+            clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%);
+        }
+
+        @keyframes float-extreme {
+            0%, 100% { transform: translateY(0) rotateX(10deg); }
+            50% { transform: translateY(-20px) rotateX(25deg) rotateZ(2deg); }
+        }
+        /* ------------------------------------------ */
+
+        .btn-blue {
+            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+        }
+        .btn-blue:active { transform: scale(0.97); }
+
+        .info-card {
+            background: #18181b;
+            border: 2px solid #27272a;
+            border-radius: 35px;
+        }
+    </style>
+</head>
+<body class="p-6 pb-12 flex flex-col items-center">
+
+    <div class="w-full flex items-center gap-4 mb-12">
+        <button onclick="history.back()" class="w-10 h-10 flex items-center justify-center bg-zinc-900 rounded-full active:scale-90 transition-transform">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <h1 class="text-xl font-bold text-blue-500 italic uppercase">Partner Program</h1>
+    </div>
+
+    <div class="h-40 flex items-center justify-center mb-8">
+        <div class="joystick-3d-box">
+            <div class="d-pad"></div>
+            <div class="button-group">
+                <div class="btn-dot"></div><div class="btn-dot"></div>
+                <div class="btn-dot"></div><div class="btn-dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mb-10">
+        <h2 class="main-title text-3xl leading-tight mb-4 px-2">
+            Хочешь запустить свой конкурс <br> и <span class="text-blue-500 font-black">заработать</span> с этого?
+        </h2>
+        <p class="text-zinc-500 text-sm font-medium px-8">
+            Запускай свой розыгрыш на нашей платформе и получай профит.
+        </p>
+    </div>
+
+    <div class="w-full max-w-xs space-y-4 mb-8">
+        <a href="https://t.me/personovich" class="block">
+            <button class="btn-blue w-full py-5 rounded-[24px] main-title text-sm tracking-widest">
+                Написать нам
+            </button>
+        </a>
+
+        <button onclick="toggleGuide()" class="w-full py-5 bg-zinc-900 border-2 border-zinc-800 rounded-[24px] text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 active:scale-95 transition-all">
+            Как начать конкурс?
+        </button>
+    </div>
+
+    <div id="guide-block" class="hidden w-full max-w-sm animate-in fade-in slide-in-from-bottom-5 duration-500">
+        <div class="info-card p-8 space-y-8">
+            <h3 class="main-title text-blue-500 text-lg border-b border-zinc-800 pb-4">Подробная инструкция</h3>
+
+            <div class="flex gap-4">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center font-black italic">1</div>
+                <div>
+                    <p class="font-bold text-sm uppercase text-white mb-1">Связь</p>
+                    <p class="text-zinc-500 text-sm">Напишите нам, чтобы забронировать дату. Обсудим призы и время старта.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center font-black italic">2</div>
+                <div>
+                    <p class="font-bold text-sm uppercase text-white mb-1">Ресурсы</p>
+                    <p class="text-zinc-500 text-sm">Передайте <span class="text-white font-bold">NFT подарок</span> и <span class="text-white font-bold">30 звёзд</span>. Звёзды нужны системе для оплаты комиссии Telegram при отправке приза.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center font-black italic">3</div>
+                <div>
+                    <p class="font-bold text-sm uppercase text-white mb-1">Ваша прибыль</p>
+                    <p class="text-zinc-500 text-sm">Вы сами ставите цену билета. <span class="text-blue-400 font-bold">100% выручки со всех билетов вы забираете себе.</span> Мы не берем комиссию с продаж.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function toggleGuide() {
+            const guide = document.getElementById('guide-block');
+            guide.classList.toggle('hidden');
+            if (!guide.classList.contains('hidden')) {
+                guide.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+    </script>
+</body>
+</html>

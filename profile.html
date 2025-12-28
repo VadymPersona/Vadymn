@@ -27,7 +27,21 @@
             outline: none;
             transition: all 0.3s;
         }
-        .input-ton:focus { border-color: #248bf2; background: rgba(36, 139, 242, 0.05); }
+
+        /* АНИМАЦИЯ КНОПКИ СОЗДАТЬ КОНКУРС */
+        @keyframes shine {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .btn-create {
+            background: linear-gradient(270deg, #248bf2, #0052cc, #60a5fa);
+            background-size: 400% 400%;
+            animation: shine 4s ease infinite;
+            box-shadow: 0 0 20px rgba(36, 139, 242, 0.3);
+            transition: transform 0.2s;
+        }
+        .btn-create:active { transform: scale(0.96); }
 
         .btn-preset {
             background: rgba(255, 255, 255, 0.05);
@@ -40,12 +54,11 @@
             background: linear-gradient(90deg, #248bf2, #0052cc);
             box-shadow: 0 4px 15px rgba(36, 139, 242, 0.3);
         }
-        .btn-send:active { scale: 0.98; opacity: 0.9; }
     </style>
 </head>
 <body class="p-6">
 
-    <div class="flex flex-col items-center mt-4 mb-8">
+    <div class="flex flex-col items-center mt-4 mb-6">
         <div class="relative mb-3">
             <img id="user-avatar" src="" class="w-20 h-20 rounded-full border-2 border-zinc-800 object-cover opacity-0 transition-opacity duration-500">
             <div id="loader" class="absolute inset-0 bg-zinc-900 rounded-full animate-pulse"></div>
@@ -54,14 +67,31 @@
         <p id="user-username" class="text-zinc-500 text-xs">@username</p>
     </div>
 
+    <a href="roulet.html" class="block mb-4">
+        <button class="btn-create w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-white">
+            Создать конкурс 🏆
+        </button>
+    </a>
+
+    <div class="card-grad p-5 mb-4">
+        <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-3 italic">Твоя реферальная ссылка</p>
+        <div class="flex items-center gap-2 bg-black/40 p-3 rounded-xl border border-white/5 mb-3">
+            <span id="ref-link-text" class="text-[11px] text-zinc-300 truncate flex-1">t.me/mj_cryptogame_bot?start=...</span>
+            <button onclick="copyRef()" class="text-blue-500 font-bold text-[11px] uppercase">Copy</button>
+        </div>
+        <button onclick="shareRef()" class="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[11px] font-bold uppercase tracking-wider active:bg-white/10 transition-all">
+            Пригласить друга
+        </button>
+    </div>
+
     <div class="card-grad p-6 mb-4">
         <div class="mb-6">
-            <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-3">1. Connect Wallet</p>
+            <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-3 italic">1. Connect Wallet</p>
             <div id="ton-connect-button"></div>
         </div>
 
         <div id="donation-block" class="opacity-30 pointer-events-none transition-all duration-500">
-            <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-3">2. Support Amount (min 0.1)</p>
+            <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-3 italic">2. Support Amount (min 0.1)</p>
             
             <div class="relative mb-4">
                 <input type="number" id="ton-amount" value="0.1" step="0.1" min="0.1"
@@ -101,27 +131,46 @@
     <script>
         const tg = window.Telegram.WebApp;
         const MY_WALLET_ADDRESS = "UQBAshgLU8AMuBwOQjzbpE127NjtI8g9PfoVtGtVCy9SS_kg";
+        const BOT_LINK = "https://t.me/mj_cryptogame_bot";
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://vadympersona.github.io/Vadymn/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-button'
         });
 
-        function setAmount(val) {
-            document.getElementById('ton-amount').value = val;
-            tg.HapticFeedback.impactOccurred('light');
-        }
-
         const user = tg.initDataUnsafe?.user;
         if (user) {
             document.getElementById('user-name').innerText = user.first_name;
             document.getElementById('user-username').innerText = user.username ? `@${user.username}` : '';
+            
+            // Генерируем рефку
+            const fullRefLink = `${BOT_LINK}?start=${user.id}`;
+            document.getElementById('ref-link-text').innerText = fullRefLink;
+
             const avatar = document.getElementById('user-avatar');
             avatar.src = user.photo_url || `https://t.me/i/userpic/320/${user.username || 'default'}.jpg`;
             avatar.onload = () => {
                 avatar.classList.remove('opacity-0');
                 document.getElementById('loader').style.display = 'none';
             }
+        }
+
+        function copyRef() {
+            const link = document.getElementById('ref-link-text').innerText;
+            navigator.clipboard.writeText(link);
+            tg.HapticFeedback.notificationOccurred('success');
+            tg.showAlert("Ссылка скопирована!");
+        }
+
+        function shareRef() {
+            const link = document.getElementById('ref-link-text').innerText;
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=Запускай свои конкурсы в Major!`;
+            tg.openTelegramLink(shareUrl);
+        }
+
+        function setAmount(val) {
+            document.getElementById('ton-amount').value = val;
+            tg.HapticFeedback.impactOccurred('light');
         }
 
         tonConnectUI.onStatusChange(wallet => {
@@ -136,27 +185,19 @@
         async function sendDonation() {
             const amountInput = document.getElementById('ton-amount').value;
             const amountInNano = parseFloat(amountInput) * 1000000000;
-
             if (isNaN(amountInNano) || amountInput < 0.1) {
-                alert("Минимальная сумма 0.1 TON");
+                tg.showAlert("Минимальная сумма 0.1 TON");
                 return;
             }
-
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 600,
-                messages: [{
-                    address: MY_WALLET_ADDRESS,
-                    amount: amountInNano.toString(), 
-                }]
+                messages: [{ address: MY_WALLET_ADDRESS, amount: amountInNano.toString() }]
             };
-
             try {
                 const statusEl = document.getElementById('status-msg');
                 statusEl.innerText = "Confirm in wallet...";
                 statusEl.className = "text-yellow-500 text-[10px] font-bold uppercase text-center";
-
                 await tonConnectUI.sendTransaction(transaction);
-                
                 statusEl.innerText = "✅ Success! Thank you.";
                 statusEl.className = "text-green-500 text-[10px] font-bold uppercase text-center";
                 tg.HapticFeedback.notificationOccurred('success');
