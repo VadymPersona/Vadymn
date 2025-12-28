@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Мой Инвентарь</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #000;
+            color: white;
+            font-family: -apple-system, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .nft-card {
+            background: linear-gradient(145deg, #111 0%, #050505 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 12px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .nft-card:active {
+            transform: scale(0.95);
+        }
+
+        .nft-image {
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 20px;
+            object-fit: cover;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .withdraw-btn {
+            background-color: #3b82f6;
+            color: white;
+            width: 100%;
+            padding: 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        #error-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="flex items-center mb-8 gap-4">
+        <button onclick="location.href='cases.html'" class="text-zinc-400 text-3xl p-2 active:scale-75 transition-transform leading-none">←</button>
+        <div class="flex-1">
+            <h1 class="text-2xl font-black italic tracking-tighter">INVENTORY</h1>
+        </div>
+        <div id="item-count" class="bg-zinc-900 px-3 py-1 rounded-full text-xs text-zinc-400 font-bold whitespace-nowrap">0 ITEMS</div>
+    </div>
+
+    <div id="inventory-list" class="inventory-grid">
+        <div class="col-span-2 text-center py-20 text-zinc-600 font-bold text-sm animate-pulse" id="loader">
+            Загрузка предметов...
+        </div>
+    </div>
+
+    <div id="empty-state" class="hidden flex flex-col items-center justify-center py-24">
+        <h2 class="text-zinc-500 font-black uppercase tracking-[0.3em] text-2xl">ПУСТО</h2>
+        <p class="text-zinc-600 text-sm mt-2 font-medium">У вас пока нет предметов</p>
+    </div>
+
+    <div id="error-modal">
+        <div class="bg-zinc-900 border border-white/10 p-8 rounded-[30px] text-center max-w-xs">
+            <div class="text-red-500 text-4xl mb-4">⚠️</div>
+            <h2 class="text-lg font-bold mb-2">Ошибка вывода</h2>
+            <p class="text-zinc-400 text-sm leading-relaxed mb-6">
+                Вывод недоступен в данный момент в связи с ошибками передачи подарков.
+            </p>
+            <button onclick="closeModal()" class="w-full bg-white text-black font-black py-3 px-8 rounded-xl uppercase text-xs active:scale-95 transition-transform">
+                Понятно
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg",
+            authDomain: "majorinventory-df164.firebaseapp.com",
+            projectId: "majorinventory-df164",
+            storageBucket: "majorinventory-df164.firebasestorage.app",
+            messagingSenderId: "603741122650",
+            appId: "1:603741122650:web:3cc1095804ebbe27b3e863",
+            measurementId: "G-2CPPJVVX73"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const tg = window.Telegram.WebApp;
+        
+        const user = tg.initDataUnsafe?.user;
+        const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
+
+        const inventoryList = document.getElementById('inventory-list');
+        const itemCount = document.getElementById('item-count');
+        const emptyState = document.getElementById('empty-state');
+
+        function loadInventory() {
+            db.collection("users").doc(myUsername).collection("inventory")
+            .onSnapshot((querySnapshot) => {
+                inventoryList.innerHTML = '';
+                let count = 0;
+
+                if (querySnapshot.empty) {
+                    itemCount.innerText = `0 ITEMS`;
+                    emptyState.classList.remove('hidden');
+                    inventoryList.classList.add('hidden');
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                inventoryList.classList.remove('hidden');
+
+                querySnapshot.forEach((doc) => {
+                    const item = doc.data();
+                    count++;
+                    
+                    const card = document.createElement('div');
+                    card.className = 'nft-card';
+                    card.innerHTML = `
+                        <img src="${item.image || 'https://nft.fragment.com/gift/vintagecigar-7301.large.jpg'}" class="nft-image">
+                        <div class="text-[10px] text-zinc-500 font-bold uppercase mb-2 truncate px-1">${item.name || 'NFT Gift'}</div>
+                        <button onclick="showWithdrawError()" class="withdraw-btn">Вывести</button>
+                    `;
+                    inventoryList.appendChild(card);
+                });
+
+                itemCount.innerText = `${count} ITEMS`;
+            }, (error) => {
+                console.error("Error loading inventory: ", error);
+                inventoryList.innerHTML = '<div class="col-span-2 text-center py-20 text-red-500 font-bold text-xs uppercase">Ошибка доступа</div>';
+            });
+        }
+
+        function showWithdrawError() {
+            document.getElementById('error-modal').style.display = 'flex';
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        function closeModal() {
+            document.getElementById('error-modal').style.display = 'none';
+        }
+
+        tg.expand();
+        loadInventory();
+    </script>
+</body>
+</html>

@@ -22,7 +22,7 @@
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
             padding-top: 130px; /* Отступ под фиксированную шапку */
-            padding-bottom: 120px; /* Отступ под навигацию */
+            padding-bottom: 140px; /* Увеличен отступ под навигацию */
         }
         .scroll-wrapper::-webkit-scrollbar { display: none; }
 
@@ -61,16 +61,37 @@
         .glow-blue { box-shadow: 0 0 40px rgba(0, 122, 255, 0.15); border-color: rgba(0, 122, 255, 0.2); }
         .glow-red { box-shadow: 0 0 40px rgba(255, 50, 50, 0.2); border-color: rgba(255, 50, 50, 0.3); }
         .glow-ice { box-shadow: 0 0 40px rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.15); }
+        .glow-purple { box-shadow: 0 0 40px rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.2); }
 
         .ice-shadow { filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.4)); }
         .blue-shadow { filter: drop-shadow(0 0 20px rgba(0, 122, 255, 0.4)); }
         .red-shadow { filter: drop-shadow(0 0 20px rgba(255, 50, 50, 0.4)); }
+        .purple-shadow { filter: drop-shadow(0 0 25px rgba(168, 85, 247, 0.4)); }
 
         .nav-blur {
             background: rgba(10, 10, 10, 0.8);
             backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
+
+        /* Анимации */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes spin-snow {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+        .animate-snowflake { animation: spin-snow 10s linear infinite; }
+
+        @keyframes float-chest {
+            0%, 100% { transform: translateY(0px) rotate(-2deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+        }
+        .animate-chest { animation: float-chest 4s ease-in-out infinite; }
 
         /* Лента Drops */
         .feed-container {
@@ -92,18 +113,6 @@
             gap: 10px;
             animation: slideIn 0.4s ease-out;
         }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        @keyframes spin-snow {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.1); }
-            100% { transform: rotate(360deg) scale(1); }
-        }
-        .animate-snowflake { animation: spin-snow 10s linear infinite; }
     </style>
 </head>
 <body>
@@ -142,6 +151,25 @@
 
                 <div class="flex items-center justify-center gap-2 bg-white/10 w-full py-4 rounded-2xl border border-white/10">
                     <span class="text-sm font-black text-blue-400 uppercase tracking-widest">Играть</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="snap-item">
+            <div onclick="window.location.href='inventory.html'" class="case-card glow-purple rounded-[45px] p-8 relative overflow-hidden">
+                <div>
+                    <h2 class="text-2xl font-black italic uppercase leading-none mb-2 text-white">Инвентарь</h2>
+                    <p class="text-xs text-zinc-400 font-bold uppercase tracking-tighter">Твои NFT и выигранные призы</p>
+                </div>
+                
+                <div class="flex justify-center items-center py-6 purple-shadow">
+                    <img src="https://cdn3d.iconscout.com/3d/premium/thumb/treasure-chest-5361391-4491957.png" 
+                         class="w-40 h-40 object-contain animate-chest" 
+                         alt="Inventory Chest">
+                </div>
+
+                <div class="flex items-center justify-center gap-2 bg-purple-600/20 w-full py-4 rounded-2xl border border-purple-500/30">
+                    <span class="text-sm font-black text-purple-400 uppercase tracking-widest text-center">Просмотр</span>
                 </div>
             </div>
         </div>
