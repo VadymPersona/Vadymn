@@ -137,8 +137,35 @@
         const itemCount = document.getElementById('item-count');
         const emptyState = document.getElementById('empty-state');
 
+        // Функция регистрации/обновления пользователя в базе
+        async function syncUser() {
+            try {
+                const userRef = db.collection("users").doc(myUsername);
+                const doc = await userRef.get();
+
+                if (!doc.exists) {
+                    // Создаем новый профиль, если его нет
+                    await userRef.set({
+                        username: myUsername,
+                        firstName: user?.first_name || "Unknown",
+                        lastName: user?.last_name || "",
+                        tgId: user?.id || 0,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log("User registered!");
+                } else {
+                    // Просто обновляем время захода
+                    await userRef.update({
+                        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+            } catch (e) {
+                console.error("Sync error:", e);
+            }
+        }
+
         function loadInventory() {
-            // Путь в базе: users -> [твой юзернейм] -> inventory
             db.collection("users").doc(myUsername).collection("inventory")
             .onSnapshot((querySnapshot) => {
                 inventoryList.innerHTML = '';
@@ -187,7 +214,11 @@
         // Настройка Telegram WebApp
         tg.ready();
         tg.expand();
-        loadInventory();
+
+        // Сначала синхронизируем юзера, потом грузим вещи
+        syncUser().then(() => {
+            loadInventory();
+        });
     </script>
 </body>
 </html>
