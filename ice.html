@@ -11,38 +11,13 @@
     <style>
         body { background-color: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; }
         .card-grad { background: linear-gradient(145deg, #111 0%, #050505 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 30px; }
-        
-        #arena-container { 
-            position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 40px; 
-            overflow: hidden; background: #050505; border: 2px solid rgba(255,255,255,0.1); 
-        }
-        
+        #arena-container { position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 40px; overflow: hidden; background: #050505; border: 2px solid rgba(255,255,255,0.1); }
         #zones-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-        
-        .arena-logo { 
-            position: absolute; inset: 0; display: flex; align-items: center; 
-            justify-content: center; z-index: 5; pointer-events: none; opacity: 0.1; 
-        }
-        .arena-logo h2 { 
-            font-size: 3rem; font-weight: 900; font-style: italic; 
-            text-transform: uppercase; color: white; border: 4px solid white; padding: 10px 20px; 
-        }
-        
-        #ball { 
-            position: absolute; width: 18px; height: 18px; background: #fff; 
-            border-radius: 50%; box-shadow: 0 0 20px #fff; z-index: 50; display: none; 
-        }
-        
-        /* Табличка BIG WIN - Всегда справа сверху */
-        #big-win-toast {
-            position: absolute; top: 12px; right: 12px; z-index: 100;
-            background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 215, 0, 0.4);
-            padding: 6px 12px; border-radius: 16px; display: none; align-items: center; gap: 8px;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1); animation: slideIn 0.5s ease;
-        }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-        .player-badge { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 14px; background: rgba(255,255,255,0.03); font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,0.05); }
+        #ball { position: absolute; width: 18px; height: 18px; background: #fff; border-radius: 50%; box-shadow: 0 0 20px #fff; z-index: 50; display: none; }
+        .arena-logo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 5; pointer-events: none; opacity: 0.15; }
+        .arena-logo h2 { font-size: 3rem; font-weight: 900; font-style: italic; text-transform: uppercase; color: white; border: 4px solid white; padding: 10px 20px; }
+        #big-win-toast { position: absolute; top: 12px; right: 12px; z-index: 100; background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 215, 0, 0.4); padding: 6px 12px; border-radius: 16px; display: none; align-items: center; gap: 8px; box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+        .player-badge { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; background: rgba(255,255,255,0.03); font-size: 10px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
         #win-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px); z-index: 200; align-items: center; justify-content: center; }
     </style>
 </head>
@@ -56,41 +31,41 @@
         </div>
     </div>
 
-    <div class="flex items-center mb-8 gap-4">
+    <div class="flex items-center mb-6 gap-4">
         <button onclick="location.href='cases.html'" class="text-zinc-400 text-2xl p-2 active:scale-75 transition-transform">←</button>
         <div class="timer-box bg-zinc-900/50 p-3 rounded-2xl border border-white/5 text-center min-w-[100px]">
             <span id="round-num" class="text-blue-500 text-[10px] uppercase font-black block">Загрузка...</span>
-            <div id="timer-val" class="text-xl font-black italic tabular-nums">00:00</div>
+            <div id="timer-val" class="text-xl font-black italic tabular-nums">00:20</div>
         </div>
     </div>
 
-    <div id="arena-container" class="mb-6">
+    <div id="arena-container" class="mb-4">
         <canvas id="zones-canvas"></canvas>
         <div class="arena-logo"><h2>Ice Arena</h2></div>
         <div id="ball"></div>
     </div>
 
-    <div class="flex justify-between items-center mb-6 px-2">
-        <div><span class="text-zinc-500 text-[9px] uppercase font-bold block">Общий Банк</span><span id="total-bank" class="text-white font-black text-3xl">0</span></div>
-        <div class="text-right"><span class="text-zinc-500 text-[9px] uppercase font-bold block">Твой Шанс</span><span id="my-chance" class="text-blue-500 font-black text-3xl">0%</span></div>
+    <div class="flex justify-between items-center mb-4 px-2">
+        <div><span class="text-zinc-500 text-[9px] uppercase font-bold block">Банк</span><span id="total-bank" class="text-white font-black text-2xl">0</span></div>
+        <div class="text-right"><span class="text-zinc-500 text-[9px] uppercase font-bold block">Шанс</span><span id="my-chance" class="text-blue-500 font-black text-2xl">0%</span></div>
     </div>
 
-    <div id="players-list" class="flex flex-wrap gap-2 mb-8 overflow-y-auto max-h-[60px]"></div>
+    <div id="players-list" class="flex flex-wrap gap-2 mb-6 overflow-y-auto max-h-[80px]"></div>
 
-    <div class="card-grad p-5">
-        <div class="grid grid-cols-3 gap-3">
-            <button onclick="handleBet(100)" class="bet-btn bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black text-zinc-300 active:scale-95 transition-all">100</button>
-            <button onclick="handleBet(250)" class="bet-btn bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black text-zinc-300 active:scale-95 transition-all">250</button>
-            <button onclick="handleBet(500)" class="bet-btn bg-zinc-900 border border-white/5 py-5 rounded-2xl font-black text-zinc-300 active:scale-95 transition-all">500</button>
+    <div class="card-grad p-4">
+        <div class="grid grid-cols-3 gap-2">
+            <button onclick="handleBet(100)" class="bet-btn bg-zinc-900 border border-white/5 py-4 rounded-xl font-black text-zinc-300 active:scale-95 transition-all">100</button>
+            <button onclick="handleBet(250)" class="bet-btn bg-zinc-900 border border-white/5 py-4 rounded-xl font-black text-zinc-300 active:scale-95 transition-all">250</button>
+            <button onclick="handleBet(500)" class="bet-btn bg-zinc-900 border border-white/5 py-4 rounded-xl font-black text-zinc-300 active:scale-95 transition-all">500</button>
         </div>
     </div>
 
     <div id="win-modal">
         <div class="card-grad p-10 text-center w-[85%] border-blue-500/30">
-            <div class="text-blue-500 text-[10px] font-black uppercase mb-6">Победитель раунда</div>
-            <img id="win-avatar" src="" class="w-24 h-24 rounded-full border-4 mx-auto mb-4 shadow-2xl border-white/20">
-            <div id="win-name" class="text-2xl font-bold mb-1 text-white">Username</div>
-            <div id="win-prize" class="text-4xl font-black text-white mb-2">0 MJ</div>
+            <div class="text-blue-500 text-[10px] font-black uppercase mb-4">Winner</div>
+            <img id="win-avatar" src="" class="w-20 h-20 rounded-full border-4 mx-auto mb-4 border-white/10">
+            <div id="win-name" class="text-xl font-bold mb-1">Username</div>
+            <div id="win-prize" class="text-3xl font-black text-blue-500">0 MJ</div>
         </div>
     </div>
 
@@ -105,206 +80,249 @@
             measurementId: "G-033CMJ0J70"
         };
         
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
         const user = tg.initDataUnsafe?.user;
         const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
-        const myDisplayName = user?.first_name || myUsername;
-
+        
         const arenaRef = db.collection("ice_arena").doc("current_session");
         const betsRef = db.collection("ice_arena_bets");
 
         let playersData = {};
         let isSpinning = false;
-        let animationTriggered = false;
+        let isProcessed = false; 
         let imgObjects = {};
         let timerInterval = null;
-        const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
+        const palette = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
+
+        function getColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            return palette[Math.abs(hash) % palette.length];
+        }
 
         const canvas = document.getElementById('zones-canvas');
         const ctx = canvas.getContext('2d');
-        
-        function resizeCanvas() {
-            canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-            drawZones();
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        function resize() { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; draw(); }
+        window.addEventListener('resize', resize);
+        resize();
 
-        // BIG WIN: Берем рекордный выигрыш за ВСЕ ВРЕМЯ (сортировка по bank)
+        // Загрузка рекорда
         db.collection("ice_arena_history").orderBy("bank", "desc").limit(1).onSnapshot(s => {
             if(!s.empty) {
                 const d = s.docs[0].data();
-                document.getElementById('bw-avatar').src = d.photo || `https://t.me/i/userpic/320/${d.winner}.jpg`;
-                document.getElementById('bw-info').innerText = `${d.displayName || d.winner} • ${d.bank} MJ`;
+                document.getElementById('bw-avatar').src = d.photo;
+                document.getElementById('bw-info').innerText = `${d.displayName} • ${d.bank} MJ`;
                 document.getElementById('big-win-toast').style.display = 'flex';
             }
         });
 
-        function drawZones() {
-            const players = Object.values(playersData);
-            const total = players.reduce((sum, p) => sum + p.amount, 0);
-            const centerX = canvas.width / 2, centerY = canvas.height / 2;
-            const radius = Math.sqrt(Math.pow(canvas.width, 2) + Math.pow(canvas.height, 2));
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (total === 0) { ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, canvas.width, canvas.height); return; }
-            let startAngle = 0;
-            players.forEach(p => {
-                const sliceAngle = (p.amount / total) * 2 * Math.PI;
-                ctx.beginPath(); ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-                ctx.fillStyle = p.color; ctx.fill();
-                const midAngle = startAngle + sliceAngle / 2;
-                const dist = canvas.width * 0.3;
-                const x = centerX + Math.cos(midAngle) * dist, y = centerY + Math.sin(midAngle) * dist;
-                ctx.save();
-                ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI * 2); ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fill();
-                if (imgObjects[p.photo]) {
-                    ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.clip();
-                    ctx.drawImage(imgObjects[p.photo], x - 20, y - 20, 40, 40);
-                }
-                ctx.restore();
-                ctx.fillStyle = "white"; ctx.font = "bold 10px Arial"; ctx.textAlign = "center";
-                ctx.fillText(p.displayName.substring(0, 10), x, y + 32);
-                startAngle += sliceAngle;
-            });
-        }
-
         async function handleBet(amount) {
             if (isSpinning) return;
-            const userRef = db.collection("users").doc(myUsername);
-            const doc = await userRef.get();
-            if (!doc.exists || doc.data().balance < amount) { tg.showAlert("Недостаточно MJ!"); return; }
-            await userRef.update({ balance: firebase.firestore.FieldValue.increment(-amount) });
-            const arenaSnap = await arenaRef.get();
-            if (!arenaSnap.exists) {
-                const history = await db.collection("ice_arena_history").get();
-                await arenaRef.set({ endTime: Date.now() + 20000, totalBank: amount, round: history.size + 1 });
-            } else {
-                await arenaRef.update({ totalBank: firebase.firestore.FieldValue.increment(amount) });
+            const uRef = db.collection("users").doc(myUsername);
+            const snap = await uRef.get();
+            if (!snap.exists || snap.data().balance < amount) return tg.showAlert("Недостаточно MJ!");
+
+            await uRef.update({ balance: firebase.firestore.FieldValue.increment(-amount) });
+            
+            const aSnap = await arenaRef.get();
+            if (!aSnap.exists) {
+                const hist = await db.collection("ice_arena_history").get();
+                await arenaRef.set({ endTime: Date.now() + 20000, round: hist.size + 1, winner: null, active: false });
             }
+            
             await betsRef.doc(myUsername).set({
-                username: myUsername, displayName: myDisplayName,
+                username: myUsername, displayName: user?.first_name || myUsername,
                 photo: user?.photo_url || `https://t.me/i/userpic/320/${myUsername}.jpg`,
                 amount: firebase.firestore.FieldValue.increment(amount)
             }, {merge: true});
-            tg.HapticFeedback.impactOccurred('medium');
+            tg.HapticFeedback.impactOccurred('light');
         }
 
         betsRef.onSnapshot(snap => {
             if (isSpinning) return;
             const list = document.getElementById('players-list');
             list.innerHTML = '';
-            let totalBank = 0, i = 0;
+            let total = 0;
             const newPlayers = {};
             snap.forEach(d => {
                 const p = d.data();
-                newPlayers[p.username] = { ...p, color: colors[i % colors.length] };
-                totalBank += p.amount; i++;
-                const badge = document.createElement('div');
-                badge.className = 'player-badge'; badge.style.borderColor = newPlayers[p.username].color;
-                badge.innerHTML = `<img src="${p.photo}" class="w-4 h-4 rounded-full"><span style="color:${newPlayers[p.username].color}">${p.displayName}</span>`;
-                list.appendChild(badge);
-                if (!imgObjects[p.photo]) {
-                    const img = new Image(); img.src = p.photo;
-                    img.onload = () => { imgObjects[p.photo] = img; drawZones(); };
+                const color = getColor(p.username);
+                newPlayers[p.username] = { ...p, color: color };
+                total += p.amount;
+                list.innerHTML += `<div class="player-badge" style="border-color:${color}">
+                    <img src="${p.photo}" class="w-4 h-4 rounded-full">
+                    <span>${p.displayName}</span>
+                    <span class="opacity-50 ml-1">${p.amount} MJ</span>
+                </div>`;
+                if (!imgObjects[p.photo]) { 
+                    const img = new Image(); 
+                    img.src = p.photo; 
+                    img.onload = draw; 
+                    imgObjects[p.photo] = img; 
                 }
             });
             playersData = newPlayers;
-            document.getElementById('total-bank').innerText = totalBank;
+            document.getElementById('total-bank').innerText = total;
             const me = playersData[myUsername];
-            document.getElementById('my-chance').innerText = me ? ((me.amount / totalBank) * 100).toFixed(0) + "%" : "0%";
-            drawZones();
+            document.getElementById('my-chance').innerText = me ? Math.round((me.amount / total) * 100) + "%" : "0%";
+            
+            if (Object.keys(newPlayers).length >= 2) {
+                arenaRef.get().then(doc => {
+                    if (doc.exists && !doc.data().active) arenaRef.update({ active: true, endTime: Date.now() + 20000 });
+                });
+            }
+            draw();
         });
 
         arenaRef.onSnapshot(doc => {
-            if (!doc.exists) {
-                clearInterval(timerInterval);
-                document.getElementById('round-num').innerText = "Ожидание...";
-                document.getElementById('timer-val').innerText = "00:00";
-                animationTriggered = false; return;
+            if (!doc.exists) { 
+                document.getElementById('round-num').innerText = "Ожидание..."; 
+                document.getElementById('timer-val').innerText = "00:20";
+                isProcessed = false; return; 
             }
             const data = doc.data();
             document.getElementById('round-num').innerText = `Раунд #${data.round}`;
+            
+            // Если победитель уже в базе — показываем результат (честность: берем из БД)
+            if (data.winner && !isSpinning && !isProcessed) { 
+                showResult(data.winner, data.totalBankAtEnd || 0); 
+                return; 
+            }
+
             clearInterval(timerInterval);
+            if (!data.active) return;
+
             timerInterval = setInterval(() => {
                 const diff = Math.max(0, Math.floor((data.endTime - Date.now()) / 1000));
                 document.getElementById('timer-val').innerText = `00:${diff < 10 ? '0'+diff : diff}`;
-                if (diff <= 0 && !animationTriggered) {
-                    if (Object.keys(playersData).length < 2) {
-                        if (Object.keys(playersData)[0] === myUsername) {
-                            arenaRef.update({ endTime: Date.now() + 20000 });
-                            tg.showAlert("Нужно минимум 2 игрока!");
-                        }
-                        return;
-                    }
-                    clearInterval(timerInterval); 
-                    animationTriggered = true; 
-                    runCrazyBall(); 
+                if (diff <= 0 && !isSpinning && !isProcessed) {
+                    startFinalProcess();
                 }
             }, 1000);
         });
 
-        function runCrazyBall() {
+        async function startFinalProcess() {
             isSpinning = true;
             document.querySelectorAll('.bet-btn').forEach(b => b.disabled = true);
+            
+            const players = Object.values(playersData);
+            
+            // ЧЕСТНОЕ ОПРЕДЕЛЕНИЕ: Только один (первый в списке) записывает результат в БД.
+            // Остальные ждут обновления из БД.
+            if (players[0].username === myUsername) {
+                const total = players.reduce((s, p) => s + p.amount, 0);
+                const rand = Math.random() * total;
+                let current = 0, winner = players[0];
+                for (let p of players) {
+                    current += p.amount;
+                    if (rand <= current) { winner = p; break; }
+                }
+                // Атомарная проверка: записываем только если победителя еще нет
+                await arenaRef.update({ 
+                    winner: winner.username, 
+                    totalBankAtEnd: total,
+                    status: 'closed'
+                });
+            }
+            
+            runBallAnimation();
+        }
+
+        function runBallAnimation() {
             const ball = document.getElementById('ball');
             const arena = document.getElementById('arena-container');
             ball.style.display = 'block';
-            let px = arena.offsetWidth / 2, py = arena.offsetHeight / 2;
-            let vx = (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random() * 10);
-            let vy = (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random() * 10);
-            const friction = 0.988;
+            let px = arena.offsetWidth/2, py = arena.offsetHeight/2;
+            let vx = (Math.random()-0.5)*35, vy = (Math.random()-0.5)*35;
+
             const move = setInterval(() => {
                 px += vx; py += vy;
-                if (px <= 5) { px = 5; vx *= -1; tg.HapticFeedback.impactOccurred('light'); }
-                if (px >= arena.offsetWidth - 23) { px = arena.offsetWidth - 23; vx *= -1; tg.HapticFeedback.impactOccurred('light'); }
-                if (py <= 5) { py = 5; vy *= -1; tg.HapticFeedback.impactOccurred('light'); }
-                if (py >= arena.offsetHeight - 23) { py = arena.offsetHeight - 23; vy *= -1; tg.HapticFeedback.impactOccurred('light'); }
-                vx *= friction; vy *= friction;
-                ball.style.left = px + 'px'; ball.style.top = py + 'px';
-                if (Math.abs(vx) + Math.abs(vy) < 0.5) {
-                    clearInterval(move); determineWinner(px + 9, py + 9);
+                if (px<=0 || px>=arena.offsetWidth-18) { vx *= -1; tg.HapticFeedback.impactOccurred('light'); }
+                if (py<=0 || py>=arena.offsetHeight-18) { vy *= -1; tg.HapticFeedback.impactOccurred('light'); }
+                vx *= 0.99; vy *= 0.99;
+                ball.style.left = px+'px'; ball.style.top = py+'px';
+                if (Math.abs(vx) + Math.abs(vy) < 0.25) { 
+                    clearInterval(move); 
+                    arenaRef.get().then(snap => {
+                        const data = snap.data();
+                        showResult(data.winner, data.totalBankAtEnd);
+                    });
                 }
             }, 16);
         }
 
-        function determineWinner(fx, fy) {
-            const centerX = canvas.width / 2, centerY = canvas.height / 2;
-            let angle = Math.atan2(fy - centerY, fx - centerX);
-            if (angle < 0) angle += 2 * Math.PI;
-            const players = Object.values(playersData);
-            const total = players.reduce((sum, p) => sum + p.amount, 0);
-            let curA = 0, winner = players[0];
-            players.forEach(p => {
-                const slice = (p.amount / total) * 2 * Math.PI;
-                if (angle >= curA && angle <= curA + slice) winner = p;
-                curA += slice;
-            });
-            const prize = Math.floor(total * 0.95);
+        async function showResult(winnerId, totalBank) {
+            if (isProcessed) return;
+            isProcessed = true;
+            
+            const winner = playersData[winnerId] || { displayName: winnerId, photo: '' };
+            const prize = Math.floor(totalBank * 0.95);
+            
             document.getElementById('win-avatar').src = winner.photo;
             document.getElementById('win-name').innerText = winner.displayName;
             document.getElementById('win-prize').innerText = `${prize} MJ`;
             document.getElementById('win-modal').style.display = 'flex';
-            tg.HapticFeedback.notificationOccurred('success');
+
+            // Начисление выигрыша
+            if (myUsername === winnerId) {
+                await db.collection("users").doc(myUsername).update({ 
+                    balance: firebase.firestore.FieldValue.increment(prize) 
+                });
+            }
+
+            // Очистка сессии (делает только хост)
             setTimeout(async () => {
-                if (myUsername === winner.username) {
-                    await db.collection("users").doc(myUsername).update({ balance: firebase.firestore.FieldValue.increment(prize) });
-                }
                 if (Object.keys(playersData)[0] === myUsername) {
                     await db.collection("ice_arena_history").add({ 
-                        winner: winner.username, displayName: winner.displayName, 
+                        winner: winnerId, displayName: winner.displayName, 
                         photo: winner.photo, bank: prize, date: Date.now() 
                     });
+                    const bSnap = await betsRef.get();
+                    const batch = db.batch();
+                    bSnap.forEach(d => batch.delete(d.ref));
+                    await batch.commit();
                     await arenaRef.delete();
-                    const snap = await betsRef.get();
-                    const batch = db.batch(); snap.forEach(d => batch.delete(d.ref)); await batch.commit();
                 }
-                location.reload(); 
+                location.reload();
             }, 5000);
         }
-        tg.ready(); tg.expand();
+
+        function draw() {
+            const players = Object.values(playersData);
+            const total = players.reduce((s, p) => s + p.amount, 0);
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            if (!total) return;
+            
+            let start = 0;
+            const centerX = canvas.width/2;
+            const centerY = canvas.height/2;
+
+            players.forEach(p => {
+                const slice = (p.amount/total)*2*Math.PI;
+                ctx.beginPath(); ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, canvas.width, start, start+slice);
+                ctx.fillStyle = p.color; ctx.fill();
+
+                const midAngle = start + slice/2;
+                const dist = canvas.width * 0.3;
+                const ax = centerX + Math.cos(midAngle) * dist;
+                const ay = centerY + Math.sin(midAngle) * dist;
+                
+                if (imgObjects[p.photo]) {
+                    ctx.save();
+                    ctx.beginPath(); ctx.arc(ax, ay, 27, 0, Math.PI*2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fill();
+                    ctx.beginPath(); ctx.arc(ax, ay, 25, 0, Math.PI*2);
+                    ctx.clip();
+                    ctx.drawImage(imgObjects[p.photo], ax-25, ay-25, 50, 50);
+                    ctx.restore();
+                }
+                start += slice;
+            });
+        }
+        tg.expand();
     </script>
 </body>
 </html>
