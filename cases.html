@@ -10,208 +10,99 @@
         body { 
             background-color: #000; color: white; 
             font-family: -apple-system, sans-serif;
-            overflow: hidden; /* Отключаем общий скролл, чтобы работал внутренний */
-            height: 100vh;
+            padding: 24px;
+            padding-bottom: 120px;
         }
 
-        /* --- КОНТЕЙНЕР ДЛЯ ВЕРТИКАЛЬНОГО СКРОЛЛА --- */
-        .scroll-wrapper {
-            height: 100vh;
-            overflow-y: scroll;
-            scroll-snap-type: y mandatory; /* Включает эффект прилипания */
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-            padding-top: 130px; /* Отступ под фиксированную шапку */
-            padding-bottom: 140px; /* Увеличен отступ под навигацию */
-        }
-        .scroll-wrapper::-webkit-scrollbar { display: none; }
-
-        .snap-item {
-            scroll-snap-align: center; /* Центрирует карточку при остановке */
-            min-height: 70vh; /* Высота области скролла для каждой карточки */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .case-card {
-            width: 100%;
-            height: 100%;
-            max-height: 500px;
-            background: linear-gradient(180deg, #0f0f0f 0%, #050505 100%);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+        /* --- КАРТОЧКИ (Стиль из Профиля) --- */
+        .card-grad { 
+            background: linear-gradient(145deg, #1a1a1a 0%, #050505 100%); 
+            border: 1px solid rgba(255,255,255,0.08); 
+            border-radius: 30px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
         }
         
-        .case-card:active { transform: scale(0.96); opacity: 0.9; }
-        
-        /* Стили блокировки */
-        .case-card.locked {
+        .card-grad:active { transform: scale(0.98); }
+
+        /* Состояния блокировки */
+        .locked {
             opacity: 0.5;
             filter: grayscale(1);
             pointer-events: none;
+            border-color: rgba(255, 255, 255, 0.05) !important;
+            box-shadow: none !important;
         }
-        
-        /* Свечения */
-        .glow-blue { box-shadow: 0 0 40px rgba(0, 122, 255, 0.15); border-color: rgba(0, 122, 255, 0.2); }
-        .glow-red { box-shadow: 0 0 40px rgba(255, 50, 50, 0.2); border-color: rgba(255, 50, 50, 0.3); }
-        .glow-ice { box-shadow: 0 0 40px rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.15); }
-        .glow-purple { box-shadow: 0 0 40px rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.2); }
 
-        .ice-shadow { filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.4)); }
-        .blue-shadow { filter: drop-shadow(0 0 20px rgba(0, 122, 255, 0.4)); }
-        .red-shadow { filter: drop-shadow(0 0 20px rgba(255, 50, 50, 0.4)); }
-        .purple-shadow { filter: drop-shadow(0 0 25px rgba(168, 85, 247, 0.4)); }
+        /* Подсветки */
+        .glow-blue { border-color: rgba(36, 139, 242, 0.4); box-shadow: 0 0 20px rgba(36, 139, 242, 0.1); }
+        .glow-red { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 0 20px rgba(239, 68, 68, 0.1); }
+        .glow-purple { border-color: rgba(168, 85, 247, 0.4); box-shadow: 0 0 20px rgba(168, 85, 247, 0.1); }
 
+        /* Навигация как в профиле */
         .nav-blur {
             background: rgba(10, 10, 10, 0.8);
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(15px);
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* Анимации */
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        @keyframes spin-snow {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.1); }
-            100% { transform: rotate(360deg) scale(1); }
-        }
-        .animate-snowflake { animation: spin-snow 10s linear infinite; }
-
-        @keyframes float-chest {
-            0%, 100% { transform: translateY(0px) rotate(-2deg); }
-            50% { transform: translateY(-15px) rotate(2deg); }
-        }
-        .animate-chest { animation: float-chest 4s ease-in-out infinite; }
-
-        /* Лента Drops */
-        .feed-container {
-            display: flex;
-            overflow-x: auto;
-            gap: 12px;
-            scrollbar-width: none;
-        }
-        .feed-container::-webkit-scrollbar { display: none; }
-
-        .feed-item {
-            flex: 0 0 auto;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            animation: slideIn 0.4s ease-out;
-        }
+        @keyframes spin-slow { to { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin-slow 12s linear infinite; }
     </style>
 </head>
 <body>
 
-    <div class="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-lg p-6 pb-2">
-        <div class="mb-4 flex justify-between items-end">
-            <div>
-                <h1 class="text-3xl font-black italic tracking-tighter uppercase text-white">Кейсы</h1>
-                <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Live Drops</p>
-            </div>
-            <div class="flex items-center gap-1.5 mb-1">
-                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                <span class="text-[9px] text-green-500 font-black uppercase">Online</span>
-            </div>
-        </div>
-        <div id="live-feed" class="feed-container"></div>
+    <div class="mb-8 mt-4">
+        <h1 class="text-3xl font-bold tracking-tight">Магазин</h1>
+        <p class="text-zinc-500 text-sm">Открывай кейсы и выигрывай MJ</p>
     </div>
 
-    <div class="scroll-wrapper">
+    <div class="space-y-4">
         
-        <div class="snap-item">
-            <div onclick="window.location.href='ice.html'" class="case-card glow-ice rounded-[45px] p-8 relative overflow-hidden">
-                <div>
-                    <div class="flex items-center gap-2 mb-2">
-                        <h2 class="text-2xl font-black italic uppercase leading-none text-white">Ice Arena</h2>
-                        <span class="bg-blue-600 text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-tighter shadow-lg shadow-blue-500/40">NEW</span>
-                    </div>
-                    <p class="text-xs text-zinc-400 font-bold uppercase tracking-tighter">Битва за MJ в реальном времени</p>
+        <div onclick="window.location.href='ice.html'" class="card-grad p-6 flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <h2 class="text-lg font-bold">Ice Arena</h2>
+                    <span class="bg-blue-500 text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase">PVP</span>
                 </div>
-                
-                <div class="flex justify-center items-center py-6 animate-snowflake ice-shadow">
-                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2V22M12 2L15 5M12 2L9 5M12 22L15 19M12 22L9 19M22 12H2M22 12L19 15M22 12L19 9M2 12L5 15M2 12L5 9M19.07 19.07L4.93 4.93M19.07 19.07L19.07 15.54M19.07 19.07L15.54 19.07M4.93 4.93L4.93 8.46M4.93 4.93L8.46 4.93M19.07 4.93L4.93 19.07M19.07 4.93L15.54 4.93M19.07 4.93L19.07 8.46M4.93 19.07L8.46 19.07M4.93 19.07L4.93 15.54" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-
-                <div class="flex items-center justify-center gap-2 bg-white/10 w-full py-4 rounded-2xl border border-white/10">
-                    <span class="text-sm font-black text-blue-400 uppercase tracking-widest">Играть</span>
-                </div>
+                <p class="text-xs text-zinc-500">Битва за MJ</p>
+            </div>
+            <div class="animate-spin-slow opacity-30">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                    <path d="M12 2L15 5M12 2L9 5M12 22L15 19M12 22L9 19M22 12L19 15M22 12L19 9M2 12L5 15M2 12L5 9" stroke-linecap="round"/>
+                </svg>
             </div>
         </div>
 
-        <div class="snap-item">
-            <div onclick="window.location.href='inventory.html'" class="case-card glow-purple rounded-[45px] p-8 relative overflow-hidden">
-                <div>
-                    <h2 class="text-2xl font-black italic uppercase leading-none mb-2 text-white">Инвентарь</h2>
-                    <p class="text-xs text-zinc-400 font-bold uppercase tracking-tighter">Твои NFT и выигранные призы</p>
-                </div>
-                
-                <div class="flex justify-center items-center py-6 purple-shadow">
-                    <img src="https://cdn3d.iconscout.com/3d/premium/thumb/treasure-chest-5361391-4491957.png" 
-                         class="w-40 h-40 object-contain animate-chest" 
-                         alt="Inventory Chest">
-                </div>
-
-                <div class="flex items-center justify-center gap-2 bg-purple-600/20 w-full py-4 rounded-2xl border border-purple-500/30">
-                    <span class="text-sm font-black text-purple-400 uppercase tracking-widest text-center">Просмотр</span>
-                </div>
+        <div onclick="window.location.href='inventory.html'" class="card-grad p-6 glow-purple flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-bold text-purple-400">Инвентарь</h2>
+                <p class="text-xs text-zinc-500">Твои предметы & NFT</p>
             </div>
+            <span class="text-2xl">🎒</span>
         </div>
 
-        <div class="snap-item">
-            <div onclick="window.location.href='case_open.html'" class="case-card glow-blue rounded-[45px] p-8 relative overflow-hidden">
-                <div>
-                    <h2 class="text-2xl font-black italic uppercase leading-none mb-2 text-white">Все или<br>Ничего</h2>
-                    <p class="text-xs text-blue-500 font-bold uppercase tracking-tighter">Открытие каждые 5 мин</p>
-                </div>
-                
-                <div class="flex justify-center items-center py-6 blue-shadow">
-                    <img src="case.png" class="w-36 h-36 object-contain" onerror="this.src='https://giftsbattle.com/cases/Porsche_911'">
-                </div>
-
-                <div class="flex items-center justify-center gap-2 bg-white/5 w-full py-4 rounded-2xl border border-white/5">
-                    <span class="text-lg font-bold text-white">0 ⭐</span>
-                </div>
+        <div id="case-5min" onclick="window.location.href='case_open.html'" class="card-grad p-6 glow-blue flex items-center justify-between">
+            <div class="z-10">
+                <h2 class="text-lg font-bold">Все или Ничего</h2>
+                <p id="timer-5min" class="text-xs text-blue-500 font-medium">Доступен сейчас</p>
             </div>
+            <img src="case.png" class="w-16 h-16 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/679/679821.png'">
         </div>
 
-        <div class="snap-item">
-            <div id="daily-card" onclick="openDaily()" class="case-card glow-red rounded-[45px] p-8 relative overflow-hidden">
-                <div>
-                    <h2 class="text-2xl font-black italic uppercase leading-none mb-2 text-red-500">Daily Free</h2>
-                    <p id="daily-status" class="text-xs text-zinc-400 font-bold uppercase tracking-tighter">Проверка...</p>
-                </div>
-                
-                <div class="flex justify-center items-center py-6 red-shadow">
-                    <img src="free.png" class="w-36 h-36 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2854/2854580.png'">
-                </div>
-
-                <div id="daily-badge" class="flex items-center justify-center gap-2 bg-red-500/20 w-full py-4 rounded-2xl border border-red-500/20">
-                    <span class="text-sm font-black text-red-500 uppercase tracking-widest">Открыть</span>
-                </div>
+        <div id="daily-card" onclick="openDaily()" class="card-grad p-6 glow-red flex items-center justify-between">
+            <div class="z-10">
+                <h2 class="text-lg font-bold text-red-500">Daily Free</h2>
+                <p id="daily-status" class="text-xs text-zinc-500">Проверка...</p>
             </div>
+            <img src="free.png" class="w-16 h-16 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2854/2854580.png'">
         </div>
 
     </div>
 
     <div class="fixed bottom-0 left-0 right-0 h-20 nav-blur flex justify-around items-center px-8 z-50">
-        <a href="index.html" class="flex flex-col items-center gap-1 opacity-40">
+        <a href="index.html" class="flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
             <span class="text-2xl">🏠</span>
             <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Главная</span>
         </a>
@@ -219,7 +110,7 @@
             <span class="text-2xl">📦</span>
             <span class="text-[10px] font-bold uppercase tracking-widest">Кейсы</span>
         </div>
-        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40">
+        <a href="profile.html" class="flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
             <span class="text-2xl">👤</span>
             <span class="text-[10px] font-medium uppercase tracking-widest text-zinc-400">Профиль</span>
         </a>
@@ -227,49 +118,49 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        const feed = document.getElementById('live-feed');
-        const COOLDOWN_TIME = 24 * 60 * 60 * 1000;
+        const COOLDOWN_DAILY = 24 * 60 * 60 * 1000;
+        const COOLDOWN_5MIN = 5 * 60 * 1000;
 
-        const NFTS = [
-            { img: 'https://nft.fragment.com/gift/candycane-6790.large.jpg', link: 'https://t.me/nft/CandyCane-6790' },
-            { img: 'https://nft.fragment.com/gift/skullflower-6790.large.jpg', link: 'https://t.me/nft/SkullFlower-6790' },
-            { img: 'https://nft.fragment.com/gift/instantramen-6790.large.jpg', link: 'https://t.me/nft/InstantRamen-6790' }
-        ];
+        function updateTimers() {
+            // Таймер для Daily Free
+            const lastDaily = localStorage.getItem('last_daily_open');
+            const dailyCard = document.getElementById('daily-card');
+            const dailyStatus = document.getElementById('daily-status');
 
-        function renderDrop(data, animate = true) {
-            const item = document.createElement('div');
-            item.className = 'feed-item';
-            if (!animate) item.style.animation = 'none';
-            let prizeHtml = data.type === 'nft' 
-                ? `<a href="${data.link}"><img src="${data.img}" class="w-8 h-8 rounded-lg border border-red-500/30"></a>`
-                : `<div class="bg-yellow-500/10 px-2 py-0.5 rounded-full"><span class="text-[10px] font-black text-yellow-500">${data.val}⭐</span></div>`;
+            if (lastDaily) {
+                const diff = Date.now() - parseInt(lastDaily);
+                if (diff < COOLDOWN_DAILY) {
+                    dailyCard.classList.add('locked');
+                    const rem = COOLDOWN_DAILY - diff;
+                    const h = Math.floor(rem/3600000);
+                    const m = Math.floor((rem%3600000)/60000);
+                    dailyStatus.innerText = `Доступно через ${h}ч ${m}м`;
+                } else {
+                    dailyCard.classList.remove('locked');
+                    dailyStatus.innerText = "Можно открыть!";
+                }
+            } else {
+                dailyStatus.innerText = "Можно открыть!";
+            }
 
-            item.innerHTML = `<img src="https://ui-avatars.com/api/?name=${data.user.replace('@','')}&background=random" class="w-7 h-7 rounded-full border border-white/10">
-                <div class="flex flex-col"><span class="text-[9px] font-bold text-zinc-400 leading-none mb-1">${data.user}</span>${prizeHtml}</div>`;
-            feed.prepend(item);
-        }
+            // Таймер для 5-минутного кейса
+            const last5min = localStorage.getItem('last_5min_open');
+            const case5min = document.getElementById('case-5min');
+            const timer5min = document.getElementById('timer-5min');
 
-        function personovichCycle() {
-            const nft = NFTS[Math.floor(Math.random() * NFTS.length)];
-            renderDrop({ user: '@personovich', type: 'nft', img: nft.img, link: nft.link });
-            setTimeout(personovichCycle, Math.random() * (240000 - 120000) + 120000);
-        }
-
-        function updateDailyCooldown() {
-            const lastOpen = localStorage.getItem('last_daily_open');
-            const card = document.getElementById('daily-card');
-            const status = document.getElementById('daily-status');
-            if (lastOpen) {
-                const diff = Date.now() - parseInt(lastOpen);
-                if (diff < COOLDOWN_TIME) {
-                    card.classList.add('locked');
-                    const rem = COOLDOWN_TIME - diff;
-                    status.innerText = `${Math.floor(rem/3600000)}ч ${Math.floor((rem%3600000)/60000)}м`;
-                    return;
+            if (last5min) {
+                const diff = Date.now() - parseInt(last5min);
+                if (diff < COOLDOWN_5MIN) {
+                    case5min.classList.add('locked');
+                    const rem = Math.ceil((COOLDOWN_5MIN - diff) / 1000);
+                    timer5min.innerText = `Ждите ${rem} сек.`;
+                    timer5min.className = "text-xs text-zinc-500";
+                } else {
+                    case5min.classList.remove('locked');
+                    timer5min.innerText = "Доступен сейчас";
+                    timer5min.className = "text-xs text-blue-500";
                 }
             }
-            card.classList.remove('locked');
-            status.innerText = "Доступен сейчас!";
         }
 
         function openDaily() {
@@ -277,9 +168,9 @@
             window.location.href = 'free_case.html';
         }
 
-        updateDailyCooldown();
-        personovichCycle();
-        setInterval(updateDailyCooldown, 60000);
+        updateTimers();
+        setInterval(updateTimers, 1000);
+        
         tg.ready();
         tg.expand();
     </script>
