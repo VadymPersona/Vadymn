@@ -9,59 +9,126 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #000; color: white; font-family: -apple-system, sans-serif; padding-bottom: 120px; }
-        .raffle-card { background: linear-gradient(145deg, #151515 0%, #050505 100%); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 32px; padding: 20px; }
-        .nft-preview { width: 100%; aspect-ratio: 1/1; border-radius: 24px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); }
-        .btn-yellow { background: #eab308; color: black; font-weight: 800; transition: all 0.2s; }
-        .btn-yellow:active { transform: scale(0.96); opacity: 0.9; }
-        .btn-cancel { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
-        .progress-bar { height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; }
-        .progress-fill { height: 100%; background: #eab308; transition: width 0.5s ease; }
+        body { 
+            background-color: #000; 
+            color: white; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Контейнер со скроллом */
+        .raffles-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+            max-height: 100vh;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Маленькая аккуратная карточка */
+        .raffle-card {
+            background: #111;
+            border-radius: 20px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .raffle-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .nft-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            object-fit: cover;
+            background: #1a1a1a;
+        }
+
+        .info-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2px;
+        }
+
+        .info-label {
+            color: #777;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            color: #eee;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* Желтая кнопка как на скриншоте */
+        .btn-action {
+            width: 100%;
+            height: 44px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-join { background: #facc15; color: #000; }
+        .btn-cancel { background: #222; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .btn-joined { background: #1a1a1a; color: #777; cursor: not-allowed; }
+
+        .btn-action:active { transform: scale(0.97); opacity: 0.9; }
+
+        /* Полоса прокрутки */
+        .raffles-container::-webkit-scrollbar { width: 0px; }
     </style>
 </head>
-<body class="p-5">
+<body>
 
-    <div class="flex items-center mb-8 gap-4">
-        <button onclick="location.href='cases.html'" class="text-zinc-400 text-3xl">←</button>
-        <h1 class="text-2xl font-black italic tracking-tighter uppercase">Live Конкурсы</h1>
+    <div class="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-md z-50 p-4 border-b border-white/5">
+        <div class="flex items-center gap-4">
+            <button onclick="location.href='cases.html'" class="text-zinc-400 text-2xl">←</button>
+            <h1 class="text-lg font-bold uppercase tracking-tight">Розыгрыши</h1>
+        </div>
     </div>
 
-    <div id="raffles-list" class="space-y-6">
-        <div class="text-center py-20 text-zinc-600 font-bold animate-pulse uppercase text-xs">Загрузка розыгрышей...</div>
+    <div id="raffles-list" class="raffles-container mt-16">
+        <div class="text-center py-20 text-zinc-600 font-bold animate-pulse text-xs uppercase">Загрузка...</div>
     </div>
 
     <script>
-        // КОНФИГ БАЗЫ ИНВЕНТАРЯ (для выдачи призов)
-        const invConfig = {
-            apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg",
-            projectId: "majorinventory-df164",
-        };
+        const invConfig = { apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg", projectId: "majorinventory-df164" };
+        const raffleConfig = { apiKey: "AIzaSyB2PZq-Jxv9vkjj_AK_4gb1Bu69UYSHibo", projectId: "majorrandom-3bdb0" };
 
-        // КОНФИГ БАЗЫ РОЗЫГРЫШЕЙ (для хранения конкурсов)
-        const raffleConfig = {
-            apiKey: "AIzaSyB2PZq-Jxv9vkjj_AK_4gb1Bu69UYSHibo",
-            projectId: "majorrandom-3bdb0",
-        };
-
-        // Инициализация двух приложений
         const invApp = firebase.initializeApp(invConfig, "inventoryApp");
         const raffleApp = firebase.initializeApp(raffleConfig, "raffleApp");
-
         const invDb = invApp.firestore();
         const raffleDb = raffleApp.firestore();
 
         const tg = window.Telegram.WebApp;
-        const user = tg.initDataUnsafe?.user;
-        const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
+        const myUsername = (tg.initDataUnsafe?.user?.username || `id${tg.initDataUnsafe?.user?.id}` || "guest").toLowerCase();
 
         function loadRaffles() {
-            // Слушаем базу РОЗЫГРЫШЕЙ
             raffleDb.collection("global_raffles").onSnapshot((snapshot) => {
                 const list = document.getElementById('raffles-list');
                 list.innerHTML = '';
 
                 if (snapshot.empty) {
-                    list.innerHTML = '<div class="text-center py-10 text-zinc-500 font-bold uppercase text-[10px]">Нет активных конкурсов</div>';
+                    list.innerHTML = '<div class="text-center py-20 text-zinc-500 text-xs uppercase">Нет активных конкурсов</div>';
                     return;
                 }
 
@@ -69,32 +136,37 @@
                     const data = doc.data();
                     const raffleId = doc.id;
                     const participants = data.participants || [];
-                    const participantsCount = participants.length;
                     const isOrganizer = data.organizer === myUsername;
                     const hasJoined = participants.includes(myUsername);
 
                     const card = document.createElement('div');
                     card.className = 'raffle-card';
                     card.innerHTML = `
-                        <img src="${data.itemImage}" class="nft-preview mb-4">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 class="font-black uppercase text-sm">${data.itemName}</h3>
-                                <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Орг: @${data.organizer}</p>
+                        <div class="text-[10px] text-zinc-500 mb-2 font-medium tracking-wide">@${data.organizer}</div>
+                        <div class="raffle-header">
+                            <img src="${data.itemImage}" class="nft-preview">
+                            <div class="info-grid">
+                                <div>
+                                    <div class="info-label">Подарок</div>
+                                    <div class="info-value truncate w-40">${data.itemName}</div>
+                                </div>
+                                <div class="flex gap-6 mt-1">
+                                    <div>
+                                        <div class="info-label">Участники</div>
+                                        <div class="info-value">${participants.length} / ${data.targetValue}</div>
+                                    </div>
+                                    <div>
+                                        <div class="info-label">Победителей</div>
+                                        <div class="info-value">1</div>
+                                    </div>
+                                </div>
                             </div>
-                            <span class="text-green-400 font-black text-xs">FREE</span>
                         </div>
-                        <div class="mb-4">
-                            <div class="flex justify-between text-[10px] font-bold uppercase mb-1 text-zinc-400">
-                                <span>Участники</span>
-                                <span>${participantsCount} / ${data.targetValue}</span>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: ${(participantsCount / data.targetValue) * 100}%"></div></div>
-                        </div>
+
                         ${isOrganizer ? 
-                            `<button onclick="cancelRaffle('${raffleId}')" class="w-full py-3 rounded-2xl btn-cancel font-bold text-xs uppercase">Отменить конкурс</button>` :
-                            `<button onclick="joinRaffle('${raffleId}')" ${hasJoined ? 'disabled' : ''} class="w-full py-4 rounded-2xl btn-yellow font-black text-xs uppercase shadow-lg shadow-yellow-500/10">
-                                ${hasJoined ? 'Вы участвуете' : 'Участвовать'}
+                            `<button onclick="cancelRaffle('${raffleId}')" class="btn-action btn-cancel">ОТМЕНИТЬ</button>` :
+                            `<button onclick="joinRaffle('${raffleId}')" class="btn-action ${hasJoined ? 'btn-joined' : 'btn-join'}" ${hasJoined ? 'disabled' : ''}>
+                                ${hasJoined ? 'ВЫ УЧАСТВУЕТЕ' : 'УЧАСТВОВАТЬ'}
                             </button>`
                         }
                     `;
@@ -107,56 +179,33 @@
             tg.HapticFeedback.impactOccurred('medium');
             const ref = raffleDb.collection("global_raffles").doc(raffleId);
             
-            // Проверка подписки (имитация)
             tg.showPopup({
-                title: 'Проверка подписки',
-                message: `Подпишитесь на @major_bit и подтвердите участие.`,
+                title: 'Участие',
+                message: 'Подпишитесь на канал организатора и @major_bit для участия.',
                 buttons: [{type: 'ok', text: 'Готово'}]
             }, async () => {
-                await ref.update({
-                    participants: firebase.firestore.FieldValue.arrayUnion(myUsername)
-                });
-                
+                await ref.update({ participants: firebase.firestore.FieldValue.arrayUnion(myUsername) });
                 const snap = await ref.get();
-                const updatedData = snap.data();
-                if (updatedData.participants.length >= updatedData.targetValue) {
-                    finalizeRaffle(raffleId, updatedData);
-                }
+                if (snap.data().participants.length >= snap.data().targetValue) finalizeRaffle(raffleId, snap.data());
             });
         }
 
         async function finalizeRaffle(raffleId, data) {
             const winner = data.participants[Math.floor(Math.random() * data.participants.length)];
-            
-            // 1. Передаем в базу ИНВЕНТАРЯ победителю
             await invDb.collection("users").doc(winner).collection("inventory").add({
-                name: data.itemName,
-                image: data.itemImage,
-                type: "won_raffle",
-                from: data.organizer,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                name: data.itemName, image: data.itemImage, type: "won", from: data.organizer, date: new Date()
             });
-
-            // 2. Удаляем из базы РОЗЫГРЫШЕЙ
             await raffleDb.collection("global_raffles").doc(raffleId).delete();
-
-            tg.showPopup({ title: 'Конкурс завершен!', message: `Победитель: @${winner}. Предмет в инвентаре!` });
         }
 
         async function cancelRaffle(raffleId) {
             const snap = await raffleDb.collection("global_raffles").doc(raffleId).get();
             const data = snap.data();
-
-            // 1. Возвращаем в базу ИНВЕНТАРЯ организатору
             await invDb.collection("users").doc(data.organizer).collection("inventory").add({
-                name: data.itemName,
-                image: data.itemImage,
-                type: "returned"
+                name: data.itemName, image: data.itemImage, type: "returned"
             });
-
-            // 2. Удаляем из базы РОЗЫГРЫШЕЙ
             await raffleDb.collection("global_raffles").doc(raffleId).delete();
-            tg.showAlert("Конкурс отменен. Предмет возвращен.");
+            tg.showAlert("Конкурс отменен.");
         }
 
         tg.ready();
