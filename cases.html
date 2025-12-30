@@ -14,7 +14,7 @@
             padding-bottom: 120px;
         }
 
-        /* --- КАРТОЧКИ (Стиль из Профиля) --- */
+        /* --- КАРТОЧКИ --- */
         .card-grad { 
             background: linear-gradient(145deg, #1a1a1a 0%, #050505 100%); 
             border: 1px solid rgba(255,255,255,0.08); 
@@ -39,8 +39,11 @@
         .glow-blue { border-color: rgba(36, 139, 242, 0.4); box-shadow: 0 0 20px rgba(36, 139, 242, 0.1); }
         .glow-red { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 0 20px rgba(239, 68, 68, 0.1); }
         .glow-purple { border-color: rgba(168, 85, 247, 0.4); box-shadow: 0 0 20px rgba(168, 85, 247, 0.1); }
+        
+        /* Желтая подсветка для Розыгрышей */
+        .glow-yellow { border-color: rgba(234, 179, 8, 0.4); box-shadow: 0 0 20px rgba(234, 179, 8, 0.1); }
 
-        /* Навигация как в профиле */
+        /* Навигация */
         .nav-blur {
             background: rgba(10, 10, 10, 0.8);
             backdrop-filter: blur(15px);
@@ -49,6 +52,13 @@
 
         @keyframes spin-slow { to { transform: rotate(360deg); } }
         .animate-spin-slow { animation: spin-slow 12s linear infinite; }
+
+        /* Анимация мерцания надписей FREE */
+        @keyframes shimmer-free {
+            0%, 100% { opacity: 0.1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.1); }
+        }
+        .animate-free { animation: shimmer-free 3s ease-in-out infinite; }
     </style>
 </head>
 <body>
@@ -61,26 +71,41 @@
     <div class="space-y-4">
         
         <div onclick="window.location.href='ice.html'" class="card-grad p-6 flex items-center justify-between">
-            <div>
+            <div class="z-10">
                 <div class="flex items-center gap-2 mb-1">
                     <h2 class="text-lg font-bold">Ice Arena</h2>
                     <span class="bg-blue-500 text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase">PVP</span>
                 </div>
                 <p class="text-xs text-zinc-500">Битва за MJ</p>
             </div>
-            <div class="animate-spin-slow opacity-30">
+            <div class="animate-spin-slow opacity-30 z-10">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
                     <path d="M12 2L15 5M12 2L9 5M12 22L15 19M12 22L9 19M22 12L19 15M22 12L19 9M2 12L5 15M2 12L5 9" stroke-linecap="round"/>
                 </svg>
             </div>
         </div>
 
+        <div onclick="window.location.href='konkurs.html'" class="card-grad p-6 glow-yellow flex items-center justify-between relative group">
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <span class="absolute top-2 right-12 text-[10px] font-black text-yellow-500/20 -rotate-12 animate-free" style="animation-delay: 0s;">FREE</span>
+                <span class="absolute bottom-3 left-20 text-[14px] font-black text-yellow-500/20 rotate-12 animate-free" style="animation-delay: 1.2s;">FREE</span>
+                <span class="absolute top-1/2 left-2 text-[8px] font-black text-yellow-500/10 -rotate-45 animate-free" style="animation-delay: 0.5s;">FREE</span>
+                <span class="absolute bottom-6 right-4 text-[11px] font-black text-yellow-500/10 rotate-6 animate-free" style="animation-delay: 2s;">FREE</span>
+            </div>
+
+            <div class="z-10">
+                <h2 class="text-lg font-bold text-yellow-400">Розыгрыши</h2>
+                <p class="text-xs text-zinc-500">Участвуй бесплатно</p>
+            </div>
+            <span class="text-2xl z-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.6)]">🎁</span>
+        </div>
+
         <div onclick="window.location.href='inventory.html'" class="card-grad p-6 glow-purple flex items-center justify-between">
-            <div>
+            <div class="z-10">
                 <h2 class="text-lg font-bold text-purple-400">Инвентарь</h2>
                 <p class="text-xs text-zinc-500">Твои предметы & NFT</p>
             </div>
-            <span class="text-2xl">🎒</span>
+            <span class="text-2xl z-10">🎒</span>
         </div>
 
         <div id="case-5min" onclick="window.location.href='case_open.html'" class="card-grad p-6 glow-blue flex items-center justify-between">
@@ -88,7 +113,7 @@
                 <h2 class="text-lg font-bold">Все или Ничего</h2>
                 <p id="timer-5min" class="text-xs text-blue-500 font-medium">Доступен сейчас</p>
             </div>
-            <img src="case.png" class="w-16 h-16 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/679/679821.png'">
+            <img src="case.png" class="w-16 h-16 object-contain z-10" onerror="this.src='https://cdn-icons-png.flaticon.com/512/679/679821.png'">
         </div>
 
         <div id="daily-card" onclick="openDaily()" class="card-grad p-6 glow-red flex items-center justify-between">
@@ -96,7 +121,7 @@
                 <h2 class="text-lg font-bold text-red-500">Daily Free</h2>
                 <p id="daily-status" class="text-xs text-zinc-500">Проверка...</p>
             </div>
-            <img src="free.png" class="w-16 h-16 object-contain" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2854/2854580.png'">
+            <img src="free.png" class="w-16 h-16 object-contain z-10" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2854/2854580.png'">
         </div>
 
     </div>
@@ -122,7 +147,7 @@
         const COOLDOWN_5MIN = 5 * 60 * 1000;
 
         function updateTimers() {
-            // Таймер для Daily Free
+            // Daily Free
             const lastDaily = localStorage.getItem('last_daily_open');
             const dailyCard = document.getElementById('daily-card');
             const dailyStatus = document.getElementById('daily-status');
@@ -143,7 +168,7 @@
                 dailyStatus.innerText = "Можно открыть!";
             }
 
-            // Таймер для 5-минутного кейса
+            // 5 min case
             const last5min = localStorage.getItem('last_5min_open');
             const case5min = document.getElementById('case-5min');
             const timer5min = document.getElementById('timer-5min');
