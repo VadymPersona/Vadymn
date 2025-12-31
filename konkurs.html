@@ -10,40 +10,40 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; color: white; font-family: -apple-system, sans-serif; overflow: hidden; }
-        .raffles-container { padding: 16px; display: flex; flex-direction: column; gap: 12px; padding-top: 80px; height: 100vh; overflow-y: auto; }
+        .raffles-container { padding: 16px; display: flex; flex-direction: column; gap: 12px; padding-top: 80px; height: 100vh; overflow-y: auto; padding-bottom: 100px; }
         
         .raffle-card {
-            background: #111;
+            background: linear-gradient(145deg, #111 0%, #0a0a0a 100%);
             border-radius: 24px;
             padding: 16px;
             border: 1px solid rgba(255, 255, 255, 0.05);
             position: relative;
-            transition: all 0.3s ease;
         }
 
-        .nft-preview { width: 70px; height: 70px; border-radius: 18px; object-fit: cover; }
+        .nft-preview { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+        .org-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; background: #222; }
 
-        /* Оверлей рулетки */
+        /* Компактная стрелка выбора */
         #roulette-overlay {
             display: none;
             position: fixed;
             inset: 0;
             z-index: 100;
-            background: rgba(0,0,0,0.98);
-            backdrop-filter: blur(25px);
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(20px);
             align-items: center;
             justify-content: center;
             flex-direction: column;
         }
 
         .roulette-window {
-            width: 90%;
-            height: 80px;
-            border-top: 2px solid rgba(250, 204, 21, 0.3);
-            border-bottom: 2px solid rgba(250, 204, 21, 0.3);
+            width: 100%;
+            height: 100px;
             position: relative;
             overflow: hidden;
-            background: rgba(255,255,255,0.03);
+            background: rgba(255,255,255,0.02);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
 
         .roulette-strip {
@@ -51,30 +51,31 @@
             align-items: center;
             position: absolute;
             height: 100%;
-            transition: transform 6s cubic-bezier(0.15, 0, 0.05, 1);
+            transition: transform 6s cubic-bezier(0.1, 0, 0.05, 1);
         }
 
         .user-slot {
-            min-width: 160px;
+            min-width: 140px;
             text-align: center;
-            font-weight: 900;
-            font-size: 16px;
+            font-weight: 800;
+            font-size: 14px;
             color: #444;
-            text-transform: lowercase;
         }
 
-        .pointer {
+        /* Маленькая аккуратная стрелка */
+        .pointer-small {
             position: absolute;
             top: 0; left: 50%;
             transform: translateX(-50%);
-            width: 2px; height: 100%;
+            width: 2px;
+            height: 20px; /* Уменьшена */
             background: #facc15;
-            box-shadow: 0 0 15px #facc15;
             z-index: 20;
+            box-shadow: 0 0 10px #facc15;
         }
+        .pointer-bottom { top: auto; bottom: 0; }
 
-        .btn-results { background: #facc15; color: #000; }
-        .close-raffle { position: absolute; top: 12px; right: 12px; color: #444; font-size: 18px; cursor: pointer; }
+        .btn-results { background: #facc15; color: #000; box-shadow: 0 4px 15px rgba(250, 204, 21, 0.2); }
     </style>
 </head>
 <body>
@@ -82,25 +83,26 @@
     <div class="fixed top-0 inset-x-0 bg-black/80 backdrop-blur-md z-50 p-4 border-b border-white/5 flex items-center justify-between">
         <div class="flex items-center gap-4">
             <button onclick="location.href='inventory.html'" class="text-zinc-400 text-2xl">←</button>
-            <h1 class="text-lg font-black uppercase italic tracking-tighter">Конкурсы</h1>
+            <h1 class="text-lg font-black uppercase italic tracking-tighter">Live Конкурсы</h1>
         </div>
     </div>
 
     <div id="raffles-list" class="raffles-container"></div>
 
     <div id="roulette-overlay">
-        <div class="pointer"></div>
+        <div class="pointer-small"></div>
         <div class="roulette-window">
             <div id="roulette-strip" class="roulette-strip"></div>
         </div>
+        <div class="pointer-small pointer-bottom"></div>
         
-        <div id="winner-box" class="hidden mt-12 text-center scale-0 transition-transform duration-500">
-            <div class="text-[10px] text-yellow-500 font-bold uppercase tracking-widest mb-2">Победитель определен</div>
-            <div id="winner-name" class="text-4xl font-black italic text-white mb-6"></div>
-            <div class="bg-white/5 border border-white/10 px-4 py-2 rounded-full inline-block">
-                <span class="text-green-400 text-[10px] font-black uppercase">● Предмет передан</span>
+        <div id="winner-box" class="hidden mt-12 text-center scale-90 opacity-0 transition-all duration-700">
+            <div id="winner-name" class="text-4xl font-black italic text-white mb-4"></div>
+            <div class="bg-green-500/10 text-green-500 border border-green-500/20 px-4 py-1.5 rounded-full inline-flex items-center gap-2">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="text-[10px] font-black uppercase tracking-widest">Приз отправлен</span>
             </div>
-            <button onclick="closeRoulette()" class="block w-full mt-12 text-zinc-500 font-bold uppercase text-xs">Вернуться</button>
+            <button onclick="closeRoulette()" class="block w-full mt-10 text-zinc-600 font-bold uppercase text-[10px] tracking-widest">Вернуться назад</button>
         </div>
     </div>
 
@@ -116,7 +118,6 @@
         const tg = window.Telegram.WebApp;
         const myUsername = (tg.initDataUnsafe?.user?.username || `id${tg.initDataUnsafe?.user?.id}`).toLowerCase();
 
-        // Локальное скрытие карточек
         let hiddenRaffles = JSON.parse(localStorage.getItem('hidden_raffles') || '[]');
 
         function loadRaffles() {
@@ -129,29 +130,50 @@
 
                     const data = doc.data();
                     const isEnded = data.status === 'ended';
-                    const isFull = data.participants.length >= data.targetValue;
+                    const participants = data.participants || [];
+                    
+                    // Логика завершения (по людям или по времени)
+                    let isReady = false;
+                    let progressText = "";
+
+                    if (data.raffleType === 'time') {
+                        const endTime = data.createdAt.toDate().getTime() + (data.targetValue * 60000);
+                        const timeLeft = Math.max(0, Math.floor((endTime - Date.now()) / 60000));
+                        isReady = timeLeft <= 0;
+                        progressText = isReady ? "ВРЕМЯ ВЫШЛО" : `${timeLeft} МИН.`;
+                    } else {
+                        isReady = participants.length >= data.targetValue;
+                        progressText = `${participants.length}/${data.targetValue}`;
+                    }
 
                     const card = document.createElement('div');
-                    card.className = `raffle-card ${isEnded ? 'opacity-60' : ''}`;
+                    card.className = `raffle-card ${isEnded ? 'opacity-40' : ''}`;
                     card.id = `card-${doc.id}`;
                     card.innerHTML = `
                         ${isEnded ? `<div class="close-raffle" onclick="hideRaffle('${doc.id}')">✕</div>` : ''}
+                        <div class="flex items-center gap-2 mb-3">
+                            <img src="https://ui-avatars.com/api/?name=${data.organizer}&background=random" class="org-avatar">
+                            <span class="text-[10px] font-bold text-zinc-400">@${data.organizer}</span>
+                        </div>
                         <div class="flex gap-4 items-center">
                             <img src="${data.itemImage}" class="nft-preview">
                             <div class="flex-1">
-                                <div class="text-[10px] text-zinc-500 font-bold uppercase">Организатор: @${data.organizer}</div>
-                                <div class="text-sm font-black uppercase truncate w-32">${data.itemName}</div>
+                                <div class="text-xs font-black uppercase truncate">${data.itemName}</div>
+                                <div class="text-[9px] text-zinc-500 font-bold uppercase mt-1">Full RTP: 99.9%</div>
                             </div>
                             <div class="text-right">
-                                <div class="text-xs font-black ${isFull ? 'text-yellow-500' : ''}">${data.participants.length}/${data.targetValue}</div>
+                                <div class="text-xs font-black italic ${isReady ? 'text-yellow-500' : ''}">${progressText}</div>
+                                <div class="text-[8px] text-zinc-600 font-bold uppercase">${data.raffleType === 'time' ? 'осталось' : 'участники'}</div>
                             </div>
                         </div>
                         
-                        ${isEnded ? 
-                            `<div class="w-full mt-4 py-3 rounded-xl bg-zinc-900 text-zinc-500 text-center font-black text-[10px] uppercase">Розыгрыш завершен</div>` :
-                            (isFull ? 
+                        ${isEnded || data.winner ? 
+                            `<button onclick="showFinalWinner('${data.winner}')" class="w-full mt-4 py-3 rounded-xl bg-zinc-900 text-zinc-400 font-black text-[10px] uppercase">Посмотреть результат</button>` :
+                            (isReady ? 
                                 `<button onclick="runRoulette('${doc.id}')" class="w-full mt-4 py-3 rounded-xl btn-results font-black text-xs uppercase">Узнать победителя</button>` :
-                                `<button onclick="joinRaffle('${doc.id}')" class="w-full mt-4 py-3 rounded-xl bg-white text-black font-black text-xs uppercase">Участвовать</button>`)
+                                `<button onclick="joinRaffle('${doc.id}')" class="w-full mt-4 py-3 rounded-xl bg-white text-black font-black text-xs uppercase ${participants.includes(myUsername) ? 'opacity-50' : ''}">
+                                    ${participants.includes(myUsername) ? 'Вы участвуете' : 'Участвовать'}
+                                </button>`)
                         }
                     `;
                     list.appendChild(card);
@@ -162,34 +184,41 @@
         async function runRoulette(raffleId) {
             const snap = await raffleDb.collection("global_raffles").doc(raffleId).get();
             const data = snap.data();
-            const users = data.participants;
-            const winner = users[Math.floor(Math.random() * users.length)];
+            
+            // Если победитель уже был выбран кем-то другим, просто показываем его
+            if (data.winner) {
+                showFinalWinner(data.winner);
+                return;
+            }
 
+            const users = data.participants;
+            if (users.length === 0) return tg.showAlert("Нет участников!");
+
+            const winner = users[Math.floor(Math.random() * users.length)];
             const strip = document.getElementById('roulette-strip');
             const overlay = document.getElementById('roulette-overlay');
             overlay.style.display = 'flex';
             strip.innerHTML = '';
 
-            // Создаем ленту (имитация 60 слотов)
-            for(let i=0; i<60; i++) {
+            for(let i=0; i<70; i++) {
                 const div = document.createElement('div');
                 div.className = 'user-slot';
                 div.innerText = `@${users[i % users.length]}`;
                 strip.appendChild(div);
             }
 
-            // Победитель на 55 позицию
-            strip.children[55].innerText = `@${winner}`;
-            strip.children[55].style.color = '#facc15';
+            strip.children[60].innerText = `@${winner}`;
+            strip.children[60].style.color = '#facc15';
 
             setTimeout(() => {
-                const xMove = (55 * 160) - (window.innerWidth / 2) + 80;
+                const xMove = (60 * 140) - (window.innerWidth / 2) + 70;
                 strip.style.transform = `translateX(-${xMove}px)`;
             }, 100);
 
             setTimeout(async () => {
-                document.getElementById('winner-box').classList.remove('hidden');
-                setTimeout(() => document.getElementById('winner-box').style.transform = 'scale(1)', 50);
+                const box = document.getElementById('winner-box');
+                box.classList.remove('hidden');
+                setTimeout(() => { box.classList.add('scale-100', 'opacity-100'); }, 50);
                 document.getElementById('winner-name').innerText = `@${winner}`;
                 tg.HapticFeedback.notificationOccurred('success');
                 
@@ -198,38 +227,50 @@
         }
 
         async function finalize(id, data, winner) {
-            // 1. Отправка победителю
+            if (data.status === 'ended') return;
+            
             await invDb.collection("users").doc(winner).collection("inventory").add({
-                name: data.itemName, image: data.itemImage, from: data.organizer, date: new Date()
+                name: data.itemName, image: data.itemImage, from: data.organizer, date: new Date(), rtp: "99.9%"
             });
 
-            // 2. Статус "завершено"
-            await raffleDb.collection("global_raffles").doc(id).update({ status: 'ended' });
+            await raffleDb.collection("global_raffles").doc(id).update({ 
+                status: 'ended',
+                winner: winner 
+            });
 
-            // 3. Авто-удаление из БД через 5 минут
-            setTimeout(async () => {
-                await raffleDb.collection("global_raffles").doc(id).delete();
-            }, 300000); 
+            // Удаление через 5 минут
+            setTimeout(() => { raffleDb.collection("global_raffles").doc(id).delete(); }, 300000);
+        }
+
+        function showFinalWinner(name) {
+            const overlay = document.getElementById('roulette-overlay');
+            const box = document.getElementById('winner-box');
+            overlay.style.display = 'flex';
+            box.classList.remove('hidden');
+            box.classList.add('scale-100', 'opacity-100');
+            document.getElementById('winner-name').innerText = `@${name}`;
+            document.getElementById('roulette-strip').innerHTML = '<div class="user-slot text-yellow-500">РОЗЫГРЫШ ЗАВЕРШЕН</div>';
+        }
+
+        function closeRoulette() {
+            document.getElementById('roulette-overlay').style.display = 'none';
+            document.getElementById('winner-box').classList.add('hidden', 'opacity-0', 'scale-90');
+            document.getElementById('roulette-strip').style.transform = 'translateX(0)';
+        }
+
+        async function joinRaffle(id) {
+            const ref = raffleDb.collection("global_raffles").doc(id);
+            const doc = await ref.get();
+            if (doc.data().participants.includes(myUsername)) return;
+
+            await ref.update({ participants: firebase.firestore.FieldValue.arrayUnion(myUsername) });
+            tg.HapticFeedback.impactOccurred('medium');
         }
 
         function hideRaffle(id) {
             hiddenRaffles.push(id);
             localStorage.setItem('hidden_raffles', JSON.stringify(hiddenRaffles));
-            document.getElementById(`card-${id}`).style.display = 'none';
-        }
-
-        function closeRoulette() {
-            document.getElementById('roulette-overlay').style.display = 'none';
-            document.getElementById('winner-box').classList.add('hidden');
-            document.getElementById('winner-box').style.transform = 'scale(0)';
-            document.getElementById('roulette-strip').style.transform = 'translateX(0)';
-        }
-
-        async function joinRaffle(id) {
-            await raffleDb.collection("global_raffles").doc(id).update({
-                participants: firebase.firestore.FieldValue.arrayUnion(myUsername)
-            });
-            tg.HapticFeedback.impactOccurred('medium');
+            loadRaffles();
         }
 
         tg.ready();
