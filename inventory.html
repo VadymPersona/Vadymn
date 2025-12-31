@@ -23,8 +23,7 @@
         .tab-container { display: flex; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
         .tab-btn { flex: 1; padding: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 10px; color: #71717a; }
         .tab-btn.active { background: #eab308; color: black; }
-
-        .withdraw-timer { position: absolute; top: 18px; left: 18px; background: rgba(59, 130, 246, 0.9); padding: 4px 8px; border-radius: 10px; font-size: 10px; font-weight: 900; color: white; display: flex; align-items: center; gap: 4px; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .withdraw-timer { position: absolute; top: 18px; left: 18px; background: rgba(59, 130, 246, 0.9); padding: 4px 8px; border-radius: 10px; font-size: 10px; font-weight: 900; color: white; z-index: 5; }
         .nft-image.pending { filter: grayscale(0.5) opacity(0.8); cursor: default; }
     </style>
 </head>
@@ -35,11 +34,11 @@
         <div class="flex-1">
             <h1 class="text-2xl font-black italic tracking-tighter uppercase">INVENTORY</h1>
         </div>
-        <div id="item-count" class="bg-zinc-900 px-3 py-1 rounded-full text-xs text-zinc-400 font-bold whitespace-nowrap uppercase">0 Items</div>
+        <div id="item-count" class="bg-zinc-900 px-3 py-1 rounded-full text-xs text-zinc-400 font-bold uppercase">0 Items</div>
     </div>
 
     <div id="inventory-list" class="inventory-grid">
-        <div class="col-span-2 text-center py-20 text-zinc-600 font-bold text-sm animate-pulse" id="loader">ЗАГРУЗКА...</div>
+        <div class="col-span-2 text-center py-20 text-zinc-600 font-bold text-sm" id="loader">ЗАГРУЗКА...</div>
     </div>
 
     <div id="empty-state" class="hidden flex flex-col items-center justify-center py-32">
@@ -88,24 +87,23 @@
         let currentItemData = null;
         let currentRaffleType = 'time';
 
-        // КЛЮЧЕВАЯ ЛОГИКА: Трансформация ссылки из БД в t.me/nft/
-        function getFragmentData(imageUrl) {
+        // ПРЕОБРАЗОВАНИЕ: Картинка -> Рабочая ссылка Telegram
+        function getFragmentInfo(imageUrl) {
             try {
-                // Берем слаг (напр. santahat-55045)
-                const slug = imageUrl.split('/gift/')[1].split('.large.jpg')[0]; 
+                // Из "https://.../gift/blue-diamond-55045.large.jpg" достаем "blue-diamond-55045"
+                const slug = imageUrl.split('/gift/')[1].split('.large.jpg')[0];
                 const parts = slug.split('-');
-                const number = parts.pop(); 
+                const number = parts.pop(); // "55045"
                 
-                // Каждое слово с большой буквы (blue-cap -> BlueCap) для корректной работы t.me/nft/
-                const formattedName = parts.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+                // Делаем каждое слово с большой буквы для Telegram: BlueDiamond
+                const formattedName = parts.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
                 
                 return {
                     link: `https://t.me/nft/${formattedName}-${number}`,
-                    number: `#${number}`,
-                    fullName: `${formattedName} #${number}`
+                    number: `#${number}`
                 };
             } catch (e) {
-                return { link: 'https://t.me/nft', number: '#0000', fullName: 'NFT Item' };
+                return { link: 'https://t.me/nft', number: '#0000' };
             }
         }
 
@@ -126,25 +124,26 @@
                 snap.forEach((doc) => {
                     const item = doc.data();
                     const isPending = item.status === 'pending';
-                    const nftData = getFragmentData(item.image);
+                    const nftInfo = getFragmentInfo(item.image);
 
                     const card = document.createElement('div');
                     card.className = 'nft-card';
                     card.innerHTML = `
                         ${isPending ? `<div class="withdraw-timer">⏱️ 21д</div>` : ''}
                         
-                        <img src="${item.image}" class="nft-image ${isPending ? 'pending' : ''}" 
-                             onclick="if(!${isPending}) { tg.openLink('${nftData.link}') }">
+                        <img src="${item.image}" 
+                             class="nft-image ${isPending ? 'pending' : ''}" 
+                             onclick="if(!${isPending}) { tg.openLink('${nftInfo.link}') }">
                         
                         <div class="px-2">
                             <div class="text-[10px] text-zinc-400 font-bold uppercase truncate">${item.name}</div>
-                            <div class="text-[9px] text-yellow-500 font-black mt-0.5">${nftData.number}</div>
+                            <div class="text-[9px] text-yellow-500 font-black mt-0.5">${nftInfo.number}</div>
                         </div>
                         
                         <div class="mt-3">
                         ${!isPending ? `
                             <button onclick="openWithdrawModal('${doc.id}')" class="btn-base withdraw-btn">Вывести</button>
-                            <button onclick="openRaffleModal('${doc.id}', '${nftData.fullName}', '${item.image}')" class="btn-base raffle-btn">Разыграть</button>
+                            <button onclick="openRaffleModal('${doc.id}', '${item.name} ${nftInfo.number}', '${item.image}')" class="btn-base raffle-btn">Разыграть</button>
                         ` : `
                             <div class="text-[8px] text-zinc-600 font-black uppercase italic py-2">В обработке</div>
                         `}
@@ -182,25 +181,21 @@
             const val = document.getElementById('raffle-value').value;
             const chan = document.getElementById('raffle-channel').value;
             if (!val || val <= 0) return tg.showAlert("Укажите значение!");
-
-            tg.showConfirm("Запустить розыгрыш?", async (ok) => {
-                if (!ok) return;
-                try {
-                    await invDb.collection("users").doc(myUsername).collection("inventory").doc(currentItemData.id).delete();
-                    await raffleDb.collection("global_raffles").add({
-                        itemName: currentItemData.name,
-                        itemImage: currentItemData.image,
-                        organizer: myUsername,
-                        targetValue: parseInt(val),
-                        raffleType: currentRaffleType,
-                        userChannel: chan || null,
-                        participants: [],
-                        status: "active",
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    closeModal('raffle-modal');
-                } catch (e) { tg.showAlert(e.message); }
-            });
+            try {
+                await invDb.collection("users").doc(myUsername).collection("inventory").doc(currentItemData.id).delete();
+                await raffleDb.collection("global_raffles").add({
+                    itemName: currentItemData.name,
+                    itemImage: currentItemData.image,
+                    organizer: myUsername,
+                    targetValue: parseInt(val),
+                    raffleType: currentRaffleType,
+                    userChannel: chan || null,
+                    participants: [],
+                    status: "active",
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                closeModal('raffle-modal');
+            } catch (e) { tg.showAlert(e.message); }
         }
 
         function switchRaffleType(type) {
