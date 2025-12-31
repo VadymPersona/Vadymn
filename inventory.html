@@ -16,23 +16,23 @@
         .btn-base { width: 100%; padding: 10px; border-radius: 12px; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; transition: transform 0.1s; }
         .btn-base:active { transform: scale(0.95); }
         
-        /* Кнопки действий */
         .withdraw-btn { background: #3b82f6; color: white; margin-bottom: 8px; }
         .raffle-btn { background: #eab308; color: black; }
         
-        /* Кнопка-самолетик */
+        /* Кнопка-самолетик (Ссылка на NFT) */
         .tg-link-btn { position: absolute; top: 18px; right: 18px; width: 32px; height: 32px; background: #111; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; z-index: 10; cursor: pointer; }
         .tg-link-btn svg { width: 16px; height: 16px; fill: white; }
 
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
         .modal-card { background: linear-gradient(160deg, #1a1a1a 0%, #000 100%); border: 1px solid rgba(255, 255, 255, 0.1); padding: 24px; border-radius: 30px; text-align: center; width: 100%; max-width: 340px; }
         .input-dark { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 12px; width: 100%; padding: 12px; font-size: 14px; outline: none; }
+        
+        .status-badge { position: absolute; top: 18px; left: 18px; background: rgba(59, 130, 246, 0.9); padding: 4px 8px; border-radius: 8px; font-size: 9px; font-weight: 900; }
+        .nft-image.pending { filter: grayscale(0.8) opacity(0.5); }
+
         .tab-container { display: flex; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
         .tab-btn { flex: 1; padding: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 10px; color: #71717a; }
         .tab-btn.active { background: #eab308; color: black; }
-
-        .status-badge { position: absolute; top: 18px; left: 18px; background: rgba(59, 130, 246, 0.9); padding: 4px 8px; border-radius: 8px; font-size: 9px; font-weight: 900; }
-        .nft-image.pending { filter: grayscale(0.8) opacity(0.5); }
     </style>
 </head>
 <body>
@@ -49,18 +49,19 @@
         <div class="col-span-2 text-center py-20 text-zinc-600 font-bold text-sm animate-pulse" id="loader">ЗАГРУЗКА...</div>
     </div>
 
+    <div id="empty-state" class="hidden flex flex-col items-center justify-center py-32">
+        <h2 class="text-zinc-500 font-black uppercase tracking-[0.3em] text-2xl">ПУСТО</h2>
+    </div>
+
     <div id="withdraw-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="text-4xl mb-4">🎁</div>
             <h2 class="text-xl font-black uppercase text-blue-500 mb-2">Вывод предмета</h2>
-            <p class="text-zinc-400 text-[11px] mb-6 uppercase font-bold">Обработка занимает от 1 до 21 дня</p>
-            
             <div class="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl mb-6 text-left">
                 <p class="text-[10px] text-zinc-300 leading-relaxed uppercase font-black">
-                    Для активации трансфера необходимо отправить <span class="text-yellow-400">30 ⭐</span> нашему Relayer. 
+                    Отправьте <span class="text-yellow-400">30 ⭐</span> нашему Relayer для оплаты комиссии трансфера. 
                 </p>
             </div>
-
             <button onclick="tg.openTelegramLink('https://t.me/personovich')" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl uppercase text-xs mb-3">Оплатить 30 ⭐</button>
             <button onclick="submitWithdraw()" class="w-full border border-zinc-700 text-zinc-400 font-black py-4 rounded-xl uppercase text-xs">Я оплатил, вывести</button>
             <button onclick="closeModal('withdraw-modal')" class="mt-4 text-zinc-600 uppercase text-[10px] font-bold">Отмена</button>
@@ -69,19 +70,16 @@
 
     <div id="raffle-modal" class="modal-overlay">
         <div class="modal-card">
-            <h2 class="text-lg font-black italic uppercase mb-4 text-yellow-500">Создать розыгрыш</h2>
-            <img id="raffle-img" src="" class="w-20 h-20 rounded-2xl mx-auto mb-4 object-cover border border-white/10">
-            
+            <h2 class="text-lg font-black italic uppercase mb-4 text-yellow-500">Настройка розыгрыша</h2>
+            <img id="raffle-img" src="" class="w-20 h-20 rounded-2xl mx-auto mb-4 object-cover">
             <div class="tab-container">
-                <button onclick="switchRaffleType('time')" id="tab-time" class="tab-btn active">По времени (мин)</button>
-                <button onclick="switchRaffleType('users')" id="tab-users" class="tab-btn">По участникам</button>
+                <button onclick="switchRaffleType('time')" id="tab-time" class="tab-btn active">На Время</button>
+                <button onclick="switchRaffleType('users')" id="tab-users" class="tab-btn">Участники</button>
             </div>
-
             <input type="number" id="raffle-value" class="input-dark mb-4" placeholder="Значение">
-            <input type="text" id="raffle-channel" class="input-dark mb-6" placeholder="@тг_канал (для подписки)">
-
+            <input type="text" id="raffle-channel" class="input-dark mb-4" placeholder="@канал (опц)">
             <button onclick="createRaffle()" class="w-full bg-yellow-500 text-black font-black py-4 rounded-xl uppercase text-xs">Запустить</button>
-            <button onclick="closeModal('raffle-modal')" class="mt-4 text-zinc-500 uppercase text-[10px] font-bold">Закрыть</button>
+            <button onclick="closeModal('raffle-modal')" class="mt-4 text-zinc-500 uppercase text-[10px] font-bold">Отмена</button>
         </div>
     </div>
 
@@ -100,7 +98,7 @@
         let currentItemData = null;
         let currentRaffleType = 'time';
 
-        // Функция генерации ссылки t.me/nft
+        // Генерация ссылки t.me/nft/ из картинки Fragment
         function getTgNftLink(imgUrl) {
             try {
                 const slug = imgUrl.split('/gift/')[1].split('.large.jpg')[0];
@@ -111,6 +109,7 @@
             } catch(e) { return 'https://t.me/nft'; }
         }
 
+        // ЗАГРУЗКА ПРЕДМЕТОВ ИЗ БАЗЫ ИНВЕНТАРЯ
         function loadInventory() {
             invDb.collection("users").doc(myUsername).collection("inventory")
             .onSnapshot((snap) => {
@@ -118,6 +117,12 @@
                 list.innerHTML = '';
                 document.getElementById('loader').classList.add('hidden');
                 document.getElementById('item-count').innerText = `${snap.size} ITEMS`;
+
+                if (snap.empty) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('empty-state').classList.add('hidden');
 
                 snap.forEach((doc) => {
                     const item = doc.data();
@@ -140,7 +145,7 @@
                             <button onclick="openWithdrawModal('${doc.id}')" class="btn-base withdraw-btn">Вывести</button>
                             <button onclick="openRaffleModal('${doc.id}', '${item.name}', '${item.image}')" class="btn-base raffle-btn">Разыграть</button>
                         ` : `
-                            <div class="py-2 text-[8px] text-blue-400 font-black uppercase italic">Заявка проверяется</div>
+                            <div class="py-2 text-[8px] text-blue-400 font-black uppercase italic">На проверке</div>
                         `}
                     `;
                     list.appendChild(card);
@@ -148,6 +153,7 @@
             });
         }
 
+        // ЛОГИКА ВЫВОДА
         function openWithdrawModal(id) {
             currentItemData = { id };
             document.getElementById('withdraw-modal').style.display = 'flex';
@@ -160,10 +166,11 @@
                     requestTime: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 closeModal('withdraw-modal');
-                tg.showAlert("Заявка принята! Ожидайте подтверждения оплаты 30 ⭐.");
+                tg.showAlert("Заявка отправлена! Ожидайте подтверждения.");
             } catch(e) { tg.showAlert(e.message); }
         }
 
+        // ЛОГИКА РОЗЫГРЫША
         function openRaffleModal(id, name, image) {
             currentItemData = { id, name, image };
             document.getElementById('raffle-img').src = image;
@@ -175,13 +182,10 @@
             const chan = document.getElementById('raffle-channel').value;
             if (!val || val <= 0) return tg.showAlert("Укажите параметры!");
 
-            tg.showConfirm("Начать розыгрыш? Предмет исчезнет из инвентаря.", async (ok) => {
+            tg.showConfirm("Создать розыгрыш? Предмет будет удален из инвентаря.", async (ok) => {
                 if (!ok) return;
                 try {
-                    // Удаляем из инвентаря
                     await invDb.collection("users").doc(myUsername).collection("inventory").doc(currentItemData.id).delete();
-                    
-                    // Добавляем в глобальную базу
                     await raffleDb.collection("global_raffles").add({
                         itemName: currentItemData.name,
                         itemImage: currentItemData.image,
@@ -190,12 +194,11 @@
                         raffleType: currentRaffleType,
                         userChannel: chan || null,
                         status: "active",
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        participants: []
+                        participants: [],
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    
                     closeModal('raffle-modal');
-                    tg.showPopup({ title: "Успех", message: "Розыгрыш создан!" });
+                    tg.showPopup({ title: "Успех", message: "Розыгрыш запущен!" });
                 } catch(e) { tg.showAlert(e.message); }
             });
         }
