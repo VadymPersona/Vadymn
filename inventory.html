@@ -9,11 +9,10 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Стили из вашего исходного кода для сохранения дизайна */
         body { background-color: #000; color: white; font-family: -apple-system, sans-serif; min-height: 100vh; margin: 0; padding: 20px; overflow-x: hidden; padding-bottom: 50px; }
         .inventory-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
         .nft-card { background: linear-gradient(145deg, #111 0%, #050505 100%); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; padding: 12px; text-align: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); animation: fadeIn 0.5s ease forwards; position: relative; }
-        .nft-image { width: 100%; aspect-ratio: 1/1; border-radius: 20px; object-fit: cover; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .nft-image { width: 100%; aspect-ratio: 1/1; border-radius: 20px; object-fit: cover; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer; }
         .btn-base { width: 100%; padding: 10px; border-radius: 12px; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; transition: transform 0.1s; }
         .btn-base:active { transform: scale(0.95); }
         .withdraw-btn { background: #3b82f6; color: white; margin-bottom: 8px; }
@@ -24,6 +23,9 @@
         .tab-container { display: flex; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
         .tab-btn { flex: 1; padding: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 10px; color: #71717a; }
         .tab-btn.active { background: #eab308; color: black; }
+
+        .withdraw-timer { position: absolute; top: 18px; left: 18px; background: rgba(59, 130, 246, 0.9); padding: 4px 8px; border-radius: 10px; font-size: 10px; font-weight: 900; color: white; display: flex; align-items: center; gap: 4px; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .nft-image.pending { filter: grayscale(0.5) opacity(0.8); pointer-events: none; }
     </style>
 </head>
 <body>
@@ -55,7 +57,7 @@
                 <button onclick="switchRaffleType('users')" id="tab-users" class="tab-btn">Участники</button>
             </div>
 
-            <input type="number" id="raffle-value" class="input-dark mb-4" placeholder="Кол-во">
+            <input type="number" id="raffle-value" class="input-dark mb-4" placeholder="Значение">
             <input type="text" id="raffle-channel" class="input-dark mb-4" placeholder="@ваш_канал (опц)">
 
             <button onclick="createRaffle()" class="w-full bg-yellow-500 text-black font-black py-3 rounded-xl uppercase text-xs">Запустить</button>
@@ -63,65 +65,118 @@
         </div>
     </div>
 
+    <div id="withdraw-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="text-3xl mb-4">📦</div>
+            <h2 class="text-lg font-black uppercase text-blue-500 mb-2">Вывод предмета</h2>
+            <p class="text-zinc-400 text-[10px] mb-6 uppercase font-black">Вывод займет от 1 до 21 дня</p>
+            <div class="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl mb-6 text-left">
+                <p class="text-[11px] text-zinc-300 leading-relaxed uppercase font-bold">
+                    Убедитесь, что вы скинули <span class="text-yellow-400">30 ⭐</span> на передачу подарка нашему Relayer!
+                </p>
+            </div>
+            <button onclick="tg.openTelegramLink('https://t.me/personovich')" class="w-full bg-blue-600 text-white font-black py-3 rounded-xl uppercase text-xs mb-3">Скинуть 30 ⭐</button>
+            <button onclick="submitWithdraw()" class="w-full border border-blue-600 text-blue-500 font-black py-3 rounded-xl uppercase text-xs">Подать заявку на вывод</button>
+            <button onclick="closeModal('withdraw-modal')" class="mt-4 text-zinc-600 uppercase text-[9px] font-bold">Закрыть</button>
+        </div>
+    </div>
+
     <script>
-        // 1. КОНФИГУРАЦИЯ ДВУХ БАЗ ДАННЫХ
-        const invConfig = {
-            apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg",
-            authDomain: "majorinventory-df164.firebaseapp.com",
-            projectId: "majorinventory-df164",
-            storageBucket: "majorinventory-df164.firebasestorage.app",
-            messagingSenderId: "603741122650",
-            appId: "1:603741122650:web:35e730ab0448331eb3e863"
-        };
+        const invConfig = { apiKey: "AIzaSyBUl6qHJRj8wI_L_1p9CETHpsjus99vVMg", projectId: "majorinventory-df164" };
+        const raffleConfig = { apiKey: "AIzaSyB2PZq-Jxv9vkjj_AK_4gb1Bu69UYSHibo", projectId: "majorrandom-3bdb0" };
 
-        const raffleConfig = {
-            apiKey: "AIzaSyB2PZq-Jxv9vkjj_AK_4gb1Bu69UYSHibo",
-            authDomain: "majorrandom-3bdb0.firebaseapp.com",
-            projectId: "majorrandom-3bdb0",
-            storageBucket: "majorrandom-3bdb0.firebasestorage.app",
-            messagingSenderId: "45034652074",
-            appId: "1:45034652074:web:540a4af61ab7f4effa2bd3"
-        };
-
-        // Инициализация приложений
         const invApp = firebase.initializeApp(invConfig, "invApp");
         const raffleApp = firebase.initializeApp(raffleConfig, "raffleApp");
-
         const invDb = invApp.firestore();
         const raffleDb = raffleApp.firestore();
 
         const tg = window.Telegram.WebApp;
-        const user = tg.initDataUnsafe?.user;
-        const myUsername = (user?.username || `id${user?.id}` || "guest").toLowerCase();
+        const myUsername = (tg.initDataUnsafe?.user?.username || `id${tg.initDataUnsafe?.user?.id}`).toLowerCase();
 
-        let currentItemData = null; // Для хранения данных выбранного предмета
+        let currentItemData = null;
+        let currentRaffleType = 'time';
 
-        // Загрузка инвентаря из ПЕРВОЙ базы
+        // Функция для парсинга ссылки Fragment
+        function getFragmentData(imageUrl) {
+            try {
+                // Извлекаем "santahat-55045" из "https://nft.fragment.com/gift/santahat-55045.large.jpg"
+                const parts = imageUrl.split('/gift/');
+                if (parts.length < 2) return { link: 't.me/nft', number: '0000' };
+                
+                const slug = parts[1].split('.large.jpg')[0]; // "santahat-55045"
+                const [namePart, number] = slug.split('-'); // ["santahat", "55045"]
+                
+                // Делаем первую букву заглавной (SantaHat)
+                const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+                
+                return {
+                    link: `https://t.me/nft/${formattedName}-${number}`,
+                    number: `#${number}`,
+                    fullName: `${formattedName} #${number}`
+                };
+            } catch (e) {
+                return { link: 't.me/nft', number: '#0000', fullName: 'NFT Item' };
+            }
+        }
+
         function loadInventory() {
             invDb.collection("users").doc(myUsername).collection("inventory")
-            .onSnapshot((querySnapshot) => {
+            .onSnapshot((snap) => {
                 const list = document.getElementById('inventory-list');
                 list.innerHTML = '';
-                document.getElementById('item-count').innerText = `${querySnapshot.size} ITEMS`;
+                document.getElementById('item-count').innerText = `${snap.size} ITEMS`;
+                document.getElementById('loader').classList.add('hidden');
                 
-                if (querySnapshot.empty) {
+                if (snap.empty) {
                     document.getElementById('empty-state').classList.remove('hidden');
                     return;
                 }
                 document.getElementById('empty-state').classList.add('hidden');
 
-                querySnapshot.forEach((doc) => {
+                snap.forEach((doc) => {
                     const item = doc.data();
+                    const isPending = item.status === 'pending';
+                    const nftData = getFragmentData(item.image);
+
                     const card = document.createElement('div');
                     card.className = 'nft-card';
                     card.innerHTML = `
-                        <img src="${item.image}" class="nft-image">
-                        <div class="text-[10px] text-zinc-400 font-bold mb-3 uppercase">${item.name}</div>
-                        <button onclick="openRaffleModal('${doc.id}', '${item.name}', '${item.image}')" class="btn-base raffle-btn">Разыграть</button>
+                        ${isPending ? `<div class="withdraw-timer">⏱️ 21д</div>` : ''}
+                        <img src="${item.image}" class="nft-image ${isPending ? 'pending' : ''}" 
+                             onclick="!${isPending} && tg.openLink('${nftData.link}')">
+                        <div class="px-2">
+                            <div class="text-[10px] text-zinc-400 font-bold uppercase truncate">${item.name}</div>
+                            <div class="text-[9px] text-yellow-500 font-black mt-0.5">${nftData.number}</div>
+                        </div>
+                        
+                        <div class="mt-3">
+                        ${!isPending ? `
+                            <button onclick="openWithdrawModal('${doc.id}')" class="btn-base withdraw-btn">Вывести</button>
+                            <button onclick="openRaffleModal('${doc.id}', '${nftData.fullName}', '${item.image}')" class="btn-base raffle-btn">Разыграть</button>
+                        ` : `
+                            <div class="text-[8px] text-zinc-600 font-black uppercase italic py-2">В обработке</div>
+                        `}
+                        </div>
                     `;
                     list.appendChild(card);
                 });
             });
+        }
+
+        function openWithdrawModal(id) {
+            currentItemData = { id };
+            document.getElementById('withdraw-modal').style.display = 'flex';
+        }
+
+        async function submitWithdraw() {
+            try {
+                await invDb.collection("users").doc(myUsername).collection("inventory").doc(currentItemData.id).update({
+                    status: 'pending',
+                    requestDate: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                closeModal('withdraw-modal');
+                tg.showPopup({ title: "Успех", message: "Заявка отправлена!" });
+            } catch (e) { tg.showAlert(e.message); }
         }
 
         function openRaffleModal(id, name, image) {
@@ -131,40 +186,28 @@
             document.getElementById('raffle-modal').style.display = 'flex';
         }
 
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-        // СОЗДАНИЕ КОНКУРСА (Работа с двумя БД)
         async function createRaffle() {
             const val = document.getElementById('raffle-value').value;
             const chan = document.getElementById('raffle-channel').value;
-
             if (!val || val <= 0) return tg.showAlert("Укажите значение!");
 
-            tg.showConfirm("Вы уверены? Предмет будет передан в систему конкурсов.", async (ok) => {
+            tg.showConfirm("Запустить розыгрыш?", async (ok) => {
                 if (!ok) return;
-
                 try {
-                    // ЭТАП 1: Удаление из базы ИНВЕНТАРЯ
                     await invDb.collection("users").doc(myUsername).collection("inventory").doc(currentItemData.id).delete();
-
-                    // ЭТАП 2: Создание в базе КОНКУРСОВ
                     await raffleDb.collection("global_raffles").add({
                         itemName: currentItemData.name,
                         itemImage: currentItemData.image,
                         organizer: myUsername,
                         targetValue: parseInt(val),
-                        raffleType: currentRaffleType, // 'time' или 'users'
+                        raffleType: currentRaffleType,
                         userChannel: chan || null,
                         participants: [],
                         status: "active",
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-
                     closeModal('raffle-modal');
-                    tg.showPopup({ title: "Успех!", message: "Конкурс запущен. Предмет передан @personovich (холд)." });
-                } catch (e) {
-                    tg.showAlert("Ошибка: " + e.message);
-                }
+                } catch (e) { tg.showAlert(e.message); }
             });
         }
 
@@ -174,7 +217,10 @@
             document.getElementById('tab-users').classList.toggle('active', type === 'users');
         }
 
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
         tg.ready();
+        tg.expand();
         loadInventory();
     </script>
 </body>
