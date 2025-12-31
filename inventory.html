@@ -24,7 +24,6 @@
         .tab-btn { flex: 1; padding: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 10px; color: #71717a; }
         .tab-btn.active { background: #eab308; color: black; }
 
-        /* Эффект обработки вывода */
         .withdraw-timer { position: absolute; top: 18px; left: 18px; background: rgba(59, 130, 246, 0.9); padding: 4px 8px; border-radius: 10px; font-size: 10px; font-weight: 900; color: white; display: flex; align-items: center; gap: 4px; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .nft-image.pending { filter: grayscale(0.5) opacity(0.8); cursor: default; }
     </style>
@@ -52,15 +51,12 @@
             <h2 class="text-lg font-black italic uppercase mb-4 text-yellow-500">Настройка розыгрыша</h2>
             <img id="raffle-img" src="" class="w-16 h-16 rounded-xl mx-auto mb-2 object-cover">
             <p id="raffle-name" class="text-xs font-bold uppercase text-zinc-300 mb-4"></p>
-
             <div class="tab-container">
                 <button onclick="switchRaffleType('time')" id="tab-time" class="tab-btn active">На Время</button>
                 <button onclick="switchRaffleType('users')" id="tab-users" class="tab-btn">Участники</button>
             </div>
-
             <input type="number" id="raffle-value" class="input-dark mb-4" placeholder="Значение">
             <input type="text" id="raffle-channel" class="input-dark mb-4" placeholder="@ваш_канал (опц)">
-
             <button onclick="createRaffle()" class="w-full bg-yellow-500 text-black font-black py-3 rounded-xl uppercase text-xs">Запустить</button>
             <button onclick="closeModal('raffle-modal')" class="mt-4 text-zinc-500 uppercase text-[10px] font-bold">Отмена</button>
         </div>
@@ -71,11 +67,6 @@
             <div class="text-3xl mb-4">📦</div>
             <h2 class="text-lg font-black uppercase text-blue-500 mb-2">Вывод предмета</h2>
             <p class="text-zinc-400 text-[10px] mb-6 uppercase font-black">Вывод займет от 1 до 21 дня</p>
-            <div class="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl mb-6 text-left">
-                <p class="text-[11px] text-zinc-300 leading-relaxed uppercase font-bold">
-                    Убедитесь, что вы скинули <span class="text-yellow-400">30 ⭐</span> на передачу подарка нашему Relayer!
-                </p>
-            </div>
             <button onclick="tg.openTelegramLink('https://t.me/personovich')" class="w-full bg-blue-600 text-white font-black py-3 rounded-xl uppercase text-xs mb-3">Скинуть 30 ⭐</button>
             <button onclick="submitWithdraw()" class="w-full border border-blue-600 text-blue-500 font-black py-3 rounded-xl uppercase text-xs">Подать заявку на вывод</button>
             <button onclick="closeModal('withdraw-modal')" class="mt-4 text-zinc-600 uppercase text-[9px] font-bold">Закрыть</button>
@@ -97,15 +88,15 @@
         let currentItemData = null;
         let currentRaffleType = 'time';
 
-        // Функция для парсинга ссылки Fragment (Сделает SantaHat из santahat)
+        // КЛЮЧЕВАЯ ЛОГИКА: Трансформация ссылки из БД в t.me/nft/
         function getFragmentData(imageUrl) {
             try {
-                // Извлекаем "santahat-55045" из URL
+                // Берем слаг (напр. santahat-55045)
                 const slug = imageUrl.split('/gift/')[1].split('.large.jpg')[0]; 
                 const parts = slug.split('-');
-                const number = parts.pop(); // Достаем 55045
+                const number = parts.pop(); 
                 
-                // Делаем каждое слово с большой буквы
+                // Каждое слово с большой буквы (blue-cap -> BlueCap) для корректной работы t.me/nft/
                 const formattedName = parts.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
                 
                 return {
